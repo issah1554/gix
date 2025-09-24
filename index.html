@@ -38,6 +38,7 @@
             left: 15px;
             z-index: 1000;
             display: flex;
+            gap: 5px;
         }
 
         .btn-icon {
@@ -46,7 +47,6 @@
             gap: 5px;
         }
 
-        /* Modal styling */
         .modal-header {
             background-color: #0d6efd;
             color: white;
@@ -72,27 +72,22 @@
 <body>
     <div id="map"></div>
 
-    <div id="button-container" class="row text-center">
-        <div class="col-auto">
-            <button id="add-point" class="btn btn-secondary rounded-pill btn-icon">
-                <i class="bi bi-geo-alt-fill"></i> Pin
-            </button>
-        </div>
-        <div class="col-auto">
-            <button id="draw-polygon" class="btn btn-secondary rounded-pill btn-icon">
-                <i class="bi bi-paint-bucket"></i> Draw
-            </button>
-        </div>
-        <div class="col-auto">
-            <button id="reset" class="btn btn-secondary rounded-pill btn-icon">
-                <i class="bi bi-arrow-counterclockwise"></i> Reset
-            </button>
-        </div>
-        <div class="col-auto">
-            <button id="sendBtn" class="btn btn-secondary rounded-pill btn-icon">
-                <i class="bi bi-send-fill"></i> Send
-            </button>
-        </div>
+    <div id="button-container">
+        <button id="add-point" class="btn btn-secondary rounded-pill btn-icon">
+            <i class="bi bi-plus"></i> Pin
+        </button>
+        <button id="draw-polygon" class="btn btn-secondary rounded-pill btn-icon">
+            <i class="bi bi-paint-bucket"></i> Draw
+        </button>
+        <button id="reset" class="btn btn-secondary rounded-pill btn-icon">
+            <i class="bi bi-arrow-counterclockwise"></i> Reset
+        </button>
+        <button id="sendBtn" class="btn btn-secondary rounded-pill btn-icon">
+            <i class="bi bi-send-fill"></i> Send
+        </button>
+        <button id="toggle-area" class="btn btn-secondary rounded-pill btn-icon">
+            <i class="bi bi-eye"></i> Show Area
+        </button>
     </div>
 
     <!-- Modal -->
@@ -138,22 +133,16 @@
     <script src="./libs/leaflet/leaflet.js"></script>
     <script src="./libs/leaflet/L.Control.Locate.min.js"></script>
     <script src="./libs/leaflet/L.LatLng.UTM.js"></script>
-
-
     <script src="https://unpkg.com/leaflet-path-drag"></script>
     <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
 
     <script>
         var map = L.map('map').setView([-6.509, 38.08], 20);
 
-        // ───────────────
-        // Base Layers
-        // ───────────────
         const osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             attribution: '&copy; OpenStreetMap contributors',
             maxZoom: 19,
-        });
-        osmLayer.addTo(map);
+        }).addTo(map);
 
         const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
             attribution: "Tiles &copy; Esri",
@@ -165,16 +154,12 @@
             maxZoom: 20,
         });
 
-        const baseLayers = {
+        L.control.layers({
             "Street Map": osmLayer,
             "Satellite View": satelliteLayer,
             "Carto Light": cartoLightLayer,
-        };
-        L.control.layers(baseLayers).addTo(map);
+        }).addTo(map);
 
-        // ───────────────
-        // Locate control
-        // ───────────────
         let currentLatLng = null;
         navigator.geolocation.watchPosition(
             (position) => {
@@ -196,23 +181,18 @@
             keepCurrentZoomLevel: true,
         }).addTo(map);
 
-        // ───────────────
-        // Variables
-        // ───────────────
         let markers = [];
         let polygon = null;
         let areaTooltip = null;
+        let areaVisible = true;
 
-        // ───────────────
-        // Add draggable marker
-        // ───────────────
         document.getElementById('add-point').addEventListener('click', () => {
             if (!currentLatLng) {
                 alert('Unable to get your current location.');
                 return;
             }
 
-            let iconHtml = `<i class="bi bi-geo-alt-fill fs-4 text-primary"></i>`;
+            let iconHtml = `<i class="bi bi-plus fs-4 text-primary"></i>`;
             let bootstrapIcon = L.divIcon({
                 html: iconHtml,
                 className: "custom-div-icon",
@@ -226,15 +206,9 @@
                 .openPopup();
 
             markers.push(mcll);
-
-            mcll.on('drag', () => {
-                if (polygon) updatePolygon();
-            });
+            mcll.on('drag', () => { if (polygon) updatePolygon(); });
         });
 
-        // ───────────────
-        // Draw polygon
-        // ───────────────
         document.getElementById('draw-polygon').addEventListener('click', () => {
             if (markers.length < 3) {
                 alert('You need at least 3 points to create a polygon.');
@@ -242,11 +216,7 @@
             }
 
             let latlngs = markers.map(m => m.getLatLng());
-
-            if (polygon) {
-                map.removeLayer(polygon);
-                polygon = null;
-            }
+            if (polygon) map.removeLayer(polygon);
 
             polygon = L.polygon(latlngs, {
                 color: 'blue',
@@ -254,15 +224,6 @@
                 fillOpacity: 0.3,
                 draggable: true
             }).addTo(map);
-
-            // Create tooltip
-            if (!areaTooltip) {
-                areaTooltip = L.tooltip({
-                    permanent: true,
-                    direction: "center",
-                    className: "polygon-area-tooltip"
-                });
-            }
 
             updatePolygon();
 
@@ -272,9 +233,7 @@
                 let deltaLng = newLatLngs[0].lng - latlngs[0].lng;
 
                 markers.forEach((m) => {
-                    let newLat = m.getLatLng().lat + deltaLat;
-                    let newLng = m.getLatLng().lng + deltaLng;
-                    m.setLatLng([newLat, newLng]);
+                    m.setLatLng([m.getLatLng().lat + deltaLat, m.getLatLng().lng + deltaLng]);
                 });
 
                 updatePolygon();
@@ -285,28 +244,28 @@
             let latlngs = markers.map(m => m.getLatLng());
             if (polygon) polygon.setLatLngs(latlngs);
 
-            if (polygon) {
-                // Calculate area
+            if (areaVisible && polygon) {
                 let coords = latlngs.map(ll => [ll.lng, ll.lat]);
-                coords.push(coords[0]); // close polygon
+                coords.push(coords[0]);
                 let area = turf.area(turf.polygon([coords]));
-
-                // Calculate centroid
                 let centroid = turf.centroid(turf.polygon([coords]));
                 let centroidLatLng = [centroid.geometry.coordinates[1], centroid.geometry.coordinates[0]];
 
-                // Update tooltip
                 polygon.bindTooltip(area.toFixed(2) + " m²", {
                     permanent: true,
                     direction: "center",
                     className: "polygon-area-tooltip"
                 }).setLatLng(centroidLatLng);
+            } else {
+                polygon.unbindTooltip();
             }
         }
 
-        // ───────────────
-        // Reset button
-        // ───────────────
+        document.getElementById('toggle-area').addEventListener('click', () => {
+            areaVisible = !areaVisible;
+            updatePolygon();
+        });
+
         document.getElementById('reset').addEventListener('click', () => {
             markers.forEach(m => map.removeLayer(m));
             markers = [];
@@ -314,17 +273,11 @@
             polygon = null;
         });
 
-        // ───────────────
-        // Show modal
-        // ───────────────
         document.getElementById('sendBtn').addEventListener('click', () => {
             const formModal = new bootstrap.Modal(document.getElementById('formModal'));
             formModal.show();
         });
 
-        // ───────────────
-        // Save data
-        // ───────────────
         document.getElementById('save-data').addEventListener('click', (event) => {
             event.preventDefault();
             const name = document.getElementById('name').value;
