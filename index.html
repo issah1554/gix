@@ -79,6 +79,28 @@
             border-radius: 4px;
             padding: 2px 6px;
         }
+
+        .leaflet-popup-content {
+    margin: 4px;             /* reduce padding inside popup */
+    font-size: 13px;         /* smaller text */
+    color: #fff;             /* text color */
+    background: #007bff;     /* custom background */
+    border-radius: 6px;
+    text-align: center;
+}
+
+.leaflet-popup-content-wrapper {
+    background: #007bff;     /* match wrapper background */
+    color: #fff;
+    padding: 2px 6px;        /* tight padding */
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.leaflet-popup-tip {
+    background: #007bff;     /* arrow color */
+}
+
     </style>
 </head>
 
@@ -227,31 +249,36 @@
         // ───────────────
         // Add draggable marker
         // ───────────────
-        document.getElementById('add-point').addEventListener('click', () => {
-            if (!currentLatLng) {
-                Swal.fire("Error", "Unable to get your current location.", "error");
-                return;
-            }
+    document.getElementById('add-point').addEventListener('click', () => {
+        if (!currentLatLng) {
+            Swal.fire("Error", "Unable to get your current location.", "error");
+            return;
+        }
 
-            let iconHtml = `<i class="bi bi-plus fs-4 text-primary"></i>`;
-            let bootstrapIcon = L.divIcon({
-                html: iconHtml,
-                className: "custom-div-icon",
-                iconSize: [30, 42],
-                iconAnchor: [15, 42],
-            });
-
-            let mcll = L.marker(currentLatLng, { icon: bootstrapIcon, draggable: true })
-                .addTo(map)
-                .bindPopup(`Corner point ${markers.length + 1}`)
-                .openPopup();
-
-            markers.push(mcll);
-
-            mcll.on('drag', () => {
-                if (polygon) updatePolygon();
-            });
+        let iconHtml = `<i class="bi bi-pin-fill fs-5 text-danger"></i>`;
+        let bootstrapIcon = L.divIcon({
+            html: iconHtml,
+            className: "custom-div-icon",
+            iconSize: [24, 24],
+            iconAnchor: [12, 24], // bottom center, so it sits on polygon
         });
+
+        let mcll = L.marker(currentLatLng, { icon: bootstrapIcon, draggable: true })
+            .addTo(map)
+            .bindPopup(`Corner ${markers.length + 1}`, {
+                offset: L.point(0, -25), // float above marker
+                closeButton: false,
+                autoPan: false
+            })
+            .openPopup();
+
+        markers.push(mcll);
+
+        mcll.on('drag', () => {
+            if (polygon) updatePolygon();
+        });
+    });
+
 
         // ───────────────
         // Draw polygon
