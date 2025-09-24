@@ -43,18 +43,23 @@
             display: flex;
             flex-wrap: wrap;
             gap: 5px;
+
+            background: rgba(255, 255, 255, 0.2);
+            /* light transparent background */
+            backdrop-filter: blur(2px);
+            /* frosted glass effect */
+            -webkit-backdrop-filter: blur(10px);
+            /* for Safari */
+            border-radius: 12px;
+            padding: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
+
 
         .btn-icon {
             display: flex;
             align-items: center;
             gap: 5px;
-        }
-
-        /* Modal styling */
-        .modal-header {
-            background-color: #0d6efd;
-            color: white;
         }
 
         .modal-title {
@@ -126,7 +131,7 @@
 
     <div id="area-legend" style="
     position: absolute;
-    bottom: 80px;
+    top: 20px;
     left: 15px;
     z-index: 1000;
     background: rgba(0,123,255,0.8);
@@ -141,36 +146,39 @@
 
     <div id="button-container" class="row text-center">
         <div class="col-auto">
-            <button id="add-point" class="btn btn-secondary rounded-pill btn-icon">
-                <i class="bi bi-plus"></i> Pin
+            <button id="add-point" class="btn btn-secondary rounded-3 btn-icon">
+                <i class="bi bi-pin"></i> Pin
             </button>
         </div>
         <div class="col-auto">
-            <button id="draw-polygon" class="btn btn-secondary rounded-pill btn-icon">
+            <button id="draw-polygon" class="btn btn-secondary rounded-3 btn-icon">
                 <i class="bi bi-vector-pen"></i> Draw
             </button>
         </div>
 
         <div class="col-auto">
-            <button id="reset" class="btn btn-secondary rounded-pill btn-icon">
+            <button id="reset" class="btn btn-danger rounded-3 btn-icon">
                 <i class="bi bi-arrow-counterclockwise"></i> Reset
             </button>
         </div>
         <div class="col-auto">
-            <button id="sendBtn" class="btn btn-secondary rounded-pill btn-icon">
+            <button id="sendBtn" class="btn btn-primary rounded-3 btn-icon" data-bs-toggle="modal"
+                data-bs-target="#formModal">
                 <i class="bi bi-send-fill"></i> Send
             </button>
         </div>
+
     </div>
 
     <!-- Modal -->
     <div class="modal fade" id="formModal" tabindex="-1" aria-labelledby="formModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header d-flex justify-content-between">
                     <h5 class="modal-title" id="formModalLabel">Submit Your Details</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                        aria-label="Close"></button>
+                    <button type="button" class="btn btn-light rounded-circle float-end" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="bi bi-x"></i>
+                    </button>
                 </div>
                 <div class="modal-body">
                     <form id="detailsForm" novalidate>
@@ -215,7 +223,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
-        var map = L.map('map').setView([-6.509, 38.08], 20);
+        var map = L.map('map', { zoomControl: false }).setView([-6.509, 38.08], 20);
 
         // ───────────────
         // Base Layers
@@ -266,6 +274,16 @@
             setView: true,
             keepCurrentZoomLevel: true,
         }).addTo(map);
+
+        L.control
+            .zoom({
+                position: "topright",
+                zoomInText: "+",
+                zoomOutText: "-",
+                zoomInTitle: "Zoom in",
+                zoomOutTitle: "Zoom out",
+            })
+            .addTo(map);
 
         // ───────────────
         // Variables
@@ -399,14 +417,6 @@
             });
         });
 
-
-        // ───────────────
-        // Show modal
-        // ───────────────
-        document.getElementById('sendBtn').addEventListener('click', () => {
-            const formModal = new bootstrap.Modal(document.getElementById('formModal'));
-            formModal.show();
-        });
 
         // ───────────────
         // Save data
