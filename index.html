@@ -81,31 +81,63 @@
         }
 
         .leaflet-popup-content {
-    margin: 4px;             /* reduce padding inside popup */
-    font-size: 13px;         /* smaller text */
-    color: #fff;             /* text color */
-    background: #007bff;     /* custom background */
-    border-radius: 6px;
-    text-align: center;
-}
+            margin: 4px;
+            /* reduce padding inside popup */
+            font-size: 13px;
+            /* smaller text */
+            color: #fff;
+            /* text color */
+            background: #007bff;
+            /* custom background */
+            border-radius: 6px;
+            text-align: center;
+        }
 
-.leaflet-popup-content-wrapper {
-    background: #007bff;     /* match wrapper background */
-    color: #fff;
-    padding: 2px 6px;        /* tight padding */
-    border-radius: 6px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-}
+        .leaflet-popup-content-wrapper {
+            background: #007bff;
+            /* match wrapper background */
+            color: #fff;
+            padding: 2px 6px;
+            /* tight padding */
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
 
-.leaflet-popup-tip {
-    background: #007bff;     /* arrow color */
-}
+        .leaflet-popup-tip {
+            background: #007bff;
+            /* arrow color */
+        }
 
+        .leaflet-control-layers {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            font-family: Arial, sans-serif;
+        }
+
+        .leaflet-control-layers-toggle {
+            background-image: url('./assets/img/map-layers-icon.png');
+            background-size: 20px 20px;
+        }
     </style>
 </head>
 
 <body>
     <div id="map"></div>
+
+    <div id="area-legend" style="
+    position: absolute;
+    bottom: 80px;
+    left: 15px;
+    z-index: 1000;
+    background: rgba(0,123,255,0.8);
+    color: white;
+    padding: 6px 10px;
+    border-radius: 5px;
+    font-weight: bold;
+    display: none;
+">
+        Area: <span id="area-value">0</span> m²
+    </div>
 
     <div id="button-container" class="row text-center">
         <div class="col-auto">
@@ -118,11 +150,7 @@
                 <i class="bi bi-vector-pen"></i> Draw
             </button>
         </div>
-        <div class="col-auto">
-            <button id="toggle-area" class="btn btn-secondary rounded-pill btn-icon">
-                <i class="bi bi-eye"></i> Show/Hide Area
-            </button>
-        </div>
+
         <div class="col-auto">
             <button id="reset" class="btn btn-secondary rounded-pill btn-icon">
                 <i class="bi bi-arrow-counterclockwise"></i> Reset
@@ -249,35 +277,35 @@
         // ───────────────
         // Add draggable marker
         // ───────────────
-    document.getElementById('add-point').addEventListener('click', () => {
-        if (!currentLatLng) {
-            Swal.fire("Error", "Unable to get your current location.", "error");
-            return;
-        }
+        document.getElementById('add-point').addEventListener('click', () => {
+            if (!currentLatLng) {
+                Swal.fire("Error", "Unable to get your current location.", "error");
+                return;
+            }
 
-        let iconHtml = `<i class="bi bi-pin-fill fs-5 text-danger"></i>`;
-        let bootstrapIcon = L.divIcon({
-            html: iconHtml,
-            className: "custom-div-icon",
-            iconSize: [24, 24],
-            iconAnchor: [12, 24], // bottom center, so it sits on polygon
+            let iconHtml = `<i class="bi bi-pin-fill fs-5 text-danger"></i>`;
+            let bootstrapIcon = L.divIcon({
+                html: iconHtml,
+                className: "custom-div-icon",
+                iconSize: [24, 24],
+                iconAnchor: [12, 24], // bottom center, so it sits on polygon
+            });
+
+            let mcll = L.marker(currentLatLng, { icon: bootstrapIcon, draggable: true })
+                .addTo(map)
+                .bindPopup(`Corner ${markers.length + 1}`, {
+                    offset: L.point(0, -25), // float above marker
+                    closeButton: false,
+                    autoPan: false
+                })
+                .openPopup();
+
+            markers.push(mcll);
+
+            mcll.on('drag', () => {
+                if (polygon) updatePolygon();
+            });
         });
-
-        let mcll = L.marker(currentLatLng, { icon: bootstrapIcon, draggable: true })
-            .addTo(map)
-            .bindPopup(`Corner ${markers.length + 1}`, {
-                offset: L.point(0, -25), // float above marker
-                closeButton: false,
-                autoPan: false
-            })
-            .openPopup();
-
-        markers.push(mcll);
-
-        mcll.on('drag', () => {
-            if (polygon) updatePolygon();
-        });
-    });
 
 
         // ───────────────
@@ -300,7 +328,7 @@
                 color: 'blue',
                 fillColor: '#007bff',
                 fillOpacity: 0.3,
-                draggable: true
+                draggable: false
             }).addTo(map);
 
             updatePolygon();
@@ -325,33 +353,27 @@
             let latlngs = markers.map(m => m.getLatLng());
             if (polygon) polygon.setLatLngs(latlngs);
 
-            if (polygon && areaVisible) {
+            if (polygon) {
                 // Calculate area
                 let coords = latlngs.map(ll => [ll.lng, ll.lat]);
                 coords.push(coords[0]); // close polygon
                 let area = turf.area(turf.polygon([coords]));
 
-                // Calculate centroid
+                // Update legend
+                document.getElementById("area-value").innerText = area.toFixed(2);
+                document.getElementById("area-legend").style.display = "block";
+
+                // Optional: keep tooltip too
                 let centroid = turf.centroid(turf.polygon([coords]));
                 let centroidLatLng = [centroid.geometry.coordinates[1], centroid.geometry.coordinates[0]];
 
-                polygon.bindTooltip(area.toFixed(2) + " m²", {
-                    permanent: true,
-                    direction: "center",
-                    className: "polygon-area-tooltip"
-                }).setTooltipLatLng(centroidLatLng).openTooltip();
-            } else if (polygon) {
-                polygon.unbindTooltip();
+            } else {
+                document.getElementById("area-legend").style.display = "none";
             }
         }
 
-        // ───────────────
-        // Toggle area display
-        // ───────────────
-        document.getElementById('toggle-area').addEventListener('click', () => {
-            areaVisible = !areaVisible;
-            updatePolygon();
-        });
+
+
 
         // ───────────────
         // Reset button
