@@ -139,209 +139,235 @@
     <script src="./libs/leaflet/L.Control.Locate.min.js"></script>
     <script src="./libs/leaflet/L.LatLng.UTM.js"></script>
 
-<!-- Add leaflet-path-drag plugin -->
-<script src="https://unpkg.com/leaflet-path-drag"></script>
 
-<script>
-    var map = L.map('map').setView([-6.509, 38.08], 20);
+    <script src="https://unpkg.com/leaflet-path-drag"></script>
+    <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
 
-    // ───────────────
-    // Base Layers
-    // ───────────────
-    const osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19,
-    });
+    <script>
+        var map = L.map('map').setView([-6.509, 38.08], 20);
 
-    const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-        attribution: "Tiles &copy; Esri",
-        maxZoom: 19,
-    });
+        // ───────────────
+        // Base Layers
+        // ───────────────
+        const osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 19,
+        });
+        osmLayer.addTo(map);
 
-    const cartoLightLayer = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png", {
-        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-        maxZoom: 20,
-    });
-
-    osmLayer.addTo(map);
-
-    const baseLayers = {
-        "Street Map": osmLayer,
-        "Satellite View": satelliteLayer,
-        "Carto Light": cartoLightLayer,
-    };
-    L.control.layers(baseLayers, null, { position: "topleft" }).addTo(map);
-
-    // ───────────────
-    // Locate control
-    // ───────────────
-    let currentLatLng = null;
-    navigator.geolocation.watchPosition(
-        (position) => {
-            currentLatLng = [position.coords.latitude, position.coords.longitude];
-            map.setView(currentLatLng, 20);
-        },
-        (error) => {
-            console.error('Geolocation error:', error);
-            alert('Unable to retrieve your location. Showing default view.');
-        },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-    );
-
-    L.control.locate({
-        position: 'topright',
-        drawCircle: true,
-        follow: false,
-        setView: true,
-        flyTo: false,
-        keepCurrentZoomLevel: true,
-        markerStyle: { color: 'blue', fillColor: '#007bff', fillOpacity: 0.6, weight: 2 },
-        circleStyle: { color: 'blue', fillColor: '#007bff', fillOpacity: 0.2 },
-        locateOptions: { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-    }).addTo(map);
-
-    // ───────────────
-    // Variables
-    // ───────────────
-    let markers = [];
-    let polygon = null;
-
-    // ───────────────
-    // Add draggable marker
-    // ───────────────
-    document.getElementById('add-point').addEventListener('click', () => {
-        if (!currentLatLng) {
-            alert('Unable to get your current location.');
-            return;
-        }
-
-        let iconHtml = `<i class="bi bi-geo-alt-fill"></i>`;
-        let bootstrapIcon = L.divIcon({
-            html: iconHtml,
-            className: "custom-div-icon",
-            iconSize: [30, 42],
-            iconAnchor: [15, 42],
+        const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+            attribution: "Tiles &copy; Esri",
+            maxZoom: 19,
         });
 
-        let mcll = L.marker(currentLatLng, { icon: bootstrapIcon, draggable: true })
-            .addTo(map)
-            .bindPopup(`Corner point ${markers.length + 1}`)
-            .openPopup();
-
-        markers.push(mcll);
-
-        mcll.on('drag', () => {
-            if (polygon) updatePolygon();
+        const cartoLightLayer = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png", {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            maxZoom: 20,
         });
-    });
 
-    // ───────────────
-    // Draw polygon button
-    // ───────────────
-    document.getElementById('draw-polygon').addEventListener('click', () => {
-        if (markers.length < 3) {
-            alert('You need at least 3 points to create a polygon.');
-            return;
-        }
+        const baseLayers = {
+            "Street Map": osmLayer,
+            "Satellite View": satelliteLayer,
+            "Carto Light": cartoLightLayer,
+        };
+        L.control.layers(baseLayers).addTo(map);
 
-        let latlngs = markers.map(m => m.getLatLng());
+        // ───────────────
+        // Locate control
+        // ───────────────
+        let currentLatLng = null;
+        navigator.geolocation.watchPosition(
+            (position) => {
+                currentLatLng = [position.coords.latitude, position.coords.longitude];
+                map.setView(currentLatLng, 20);
+            },
+            (error) => {
+                console.error('Geolocation error:', error);
+                alert('Unable to retrieve your location.');
+            },
+            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
 
-        if (polygon) map.removeLayer(polygon);
-
-        polygon = L.polygon(latlngs, {
-            color: 'blue',
-            fillColor: '#007bff',
-            fillOpacity: 0.3,
-            draggable: true // leaflet-path-drag plugin
+        L.control.locate({
+            position: 'topright',
+            drawCircle: true,
+            follow: false,
+            setView: true,
+            keepCurrentZoomLevel: true,
         }).addTo(map);
 
-        polygon.on('drag', function (e) {
-            let newLatLngs = e.target.getLatLngs()[0];
-            let deltaLat = newLatLngs[0].lat - latlngs[0].lat;
-            let deltaLng = newLatLngs[0].lng - latlngs[0].lng;
+        // ───────────────
+        // Variables
+        // ───────────────
+        let markers = [];
+        let polygon = null;
+        let areaTooltip = null;
 
-            markers.forEach((m, i) => {
-                let newLat = m.getLatLng().lat + deltaLat;
-                let newLng = m.getLatLng().lng + deltaLng;
-                m.setLatLng([newLat, newLng]);
+        // ───────────────
+        // Add draggable marker
+        // ───────────────
+        document.getElementById('add-point').addEventListener('click', () => {
+            if (!currentLatLng) {
+                alert('Unable to get your current location.');
+                return;
+            }
+
+            let iconHtml = `<i class="bi bi-geo-alt-fill fs-4 text-primary"></i>`;
+            let bootstrapIcon = L.divIcon({
+                html: iconHtml,
+                className: "custom-div-icon",
+                iconSize: [30, 42],
+                iconAnchor: [15, 42],
             });
 
+            let mcll = L.marker(currentLatLng, { icon: bootstrapIcon, draggable: true })
+                .addTo(map)
+                .bindPopup(`Corner point ${markers.length + 1}`)
+                .openPopup();
+
+            markers.push(mcll);
+
+            mcll.on('drag', () => {
+                if (polygon) updatePolygon();
+            });
+        });
+
+        // ───────────────
+        // Draw polygon
+        // ───────────────
+        document.getElementById('draw-polygon').addEventListener('click', () => {
+            if (markers.length < 3) {
+                alert('You need at least 3 points to create a polygon.');
+                return;
+            }
+
+            let latlngs = markers.map(m => m.getLatLng());
+
+            if (polygon) {
+                map.removeLayer(polygon);
+                polygon = null;
+            }
+
+            polygon = L.polygon(latlngs, {
+                color: 'blue',
+                fillColor: '#007bff',
+                fillOpacity: 0.3,
+                draggable: true
+            }).addTo(map);
+
+            // Create tooltip
+            if (!areaTooltip) {
+                areaTooltip = L.tooltip({
+                    permanent: true,
+                    direction: "center",
+                    className: "polygon-area-tooltip"
+                });
+            }
+
             updatePolygon();
+
+            polygon.on('drag', () => {
+                let newLatLngs = polygon.getLatLngs()[0];
+                let deltaLat = newLatLngs[0].lat - latlngs[0].lat;
+                let deltaLng = newLatLngs[0].lng - latlngs[0].lng;
+
+                markers.forEach((m) => {
+                    let newLat = m.getLatLng().lat + deltaLat;
+                    let newLng = m.getLatLng().lng + deltaLng;
+                    m.setLatLng([newLat, newLng]);
+                });
+
+                updatePolygon();
+            });
         });
-    });
 
-    function updatePolygon() {
-        let latlngs = markers.map(m => m.getLatLng());
-        if (polygon) polygon.setLatLngs(latlngs);
-    }
+        function updatePolygon() {
+            let latlngs = markers.map(m => m.getLatLng());
+            if (polygon) polygon.setLatLngs(latlngs);
 
-    // ───────────────
-    // Reset button
-    // ───────────────
-    document.getElementById('reset').addEventListener('click', () => {
-        markers.forEach(m => map.removeLayer(m));
-        markers = [];
+            if (polygon) {
+                // Calculate area
+                let coords = latlngs.map(ll => [ll.lng, ll.lat]);
+                coords.push(coords[0]); // close polygon
+                let area = turf.area(turf.polygon([coords]));
 
-        if (polygon) {
-            map.removeLayer(polygon);
+                // Calculate centroid
+                let centroid = turf.centroid(turf.polygon([coords]));
+                let centroidLatLng = [centroid.geometry.coordinates[1], centroid.geometry.coordinates[0]];
+
+                // Update tooltip
+                polygon.bindTooltip(area.toFixed(2) + " m²", {
+                    permanent: true,
+                    direction: "center",
+                    className: "polygon-area-tooltip"
+                }).setLatLng(centroidLatLng);
+            }
+        }
+
+        // ───────────────
+        // Reset button
+        // ───────────────
+        document.getElementById('reset').addEventListener('click', () => {
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+            if (polygon) map.removeLayer(polygon);
             polygon = null;
-        }
-    });
-
-    // ───────────────
-    // Show modal
-    // ───────────────
-    document.getElementById('sendBtn').addEventListener('click', () => {
-        const formModal = new bootstrap.Modal(document.getElementById('formModal'));
-        formModal.show();
-    });
-
-    // ───────────────
-    // Save data
-    // ───────────────
-    document.getElementById('save-data').addEventListener('click', (event) => {
-        event.preventDefault();
-        const name = document.getElementById('name').value;
-        const phone = document.getElementById('phone').value;
-        const place = document.getElementById('place').value;
-
-        if (!name || !phone || !place) {
-            alert('Please provide client details.');
-            return;
-        }
-
-        if (markers.length < 1) {
-            alert('At least 1 point is needed to save.');
-            return;
-        }
-
-        let cornerpoints_inUTM = markers.map(m => {
-            let cll_utm = m.getLatLng().utm();
-            let hemisphere = cll_utm.southHemi ? "Southern" : "Northern";
-            return [cll_utm.x, cll_utm.y, cll_utm.zone, cll_utm.band, hemisphere];
         });
 
-        const data = { name, phone, place, cornerpoints_inUTM };
-        console.log(data);
+        // ───────────────
+        // Show modal
+        // ───────────────
+        document.getElementById('sendBtn').addEventListener('click', () => {
+            const formModal = new bootstrap.Modal(document.getElementById('formModal'));
+            formModal.show();
+        });
 
-        fetch('#', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-        })
-            .then(response => response.json())
-            .then(result => alert(result.success ? 'Data saved successfully.' : `Error: ${result.message}`))
-            .catch(error => console.error('Error:', error));
-    });
-
-    document.getElementById('detailsForm').addEventListener('submit', function (event) {
-        if (!this.checkValidity()) {
+        // ───────────────
+        // Save data
+        // ───────────────
+        document.getElementById('save-data').addEventListener('click', (event) => {
             event.preventDefault();
-            event.stopPropagation();
-        }
-        this.classList.add('was-validated');
-    });
-</script>
+            const name = document.getElementById('name').value;
+            const phone = document.getElementById('phone').value;
+            const place = document.getElementById('place').value;
+
+            if (!name || !phone || !place) {
+                alert('Please provide client details.');
+                return;
+            }
+
+            if (markers.length < 1) {
+                alert('At least 1 point is needed to save.');
+                return;
+            }
+
+            let cornerpoints_inUTM = markers.map(m => {
+                let cll_utm = m.getLatLng().utm();
+                let hemisphere = cll_utm.southHemi ? "Southern" : "Northern";
+                return [cll_utm.x, cll_utm.y, cll_utm.zone, cll_utm.band, hemisphere];
+            });
+
+            const data = { name, phone, place, cornerpoints_inUTM };
+            console.log(data);
+
+            fetch('#', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            })
+                .then(response => response.json())
+                .then(result => alert(result.success ? 'Data saved successfully.' : `Error: ${result.message}`))
+                .catch(error => console.error('Error:', error));
+        });
+
+        document.getElementById('detailsForm').addEventListener('submit', function (event) {
+            if (!this.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            this.classList.add('was-validated');
+        });
+    </script>
 </body>
 
 </html>
