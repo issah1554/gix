@@ -5,11 +5,24 @@
     <title>Databenki GPS</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="./libs/bootstrap5.3.3/css/bootstrap.min.css">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="./libs/leaflet/leaflet.css">
-    <link rel="stylesheet" href="./libs//leaflet/L.Control.Locate.min.css">
+    <link rel="stylesheet" href="./libs/leaflet/L.Control.Locate.min.css">
 
     <style>
+        body,
+        html {
+            height: 100%;
+            margin: 0;
+        }
+
         #map {
             height: 100vh;
             width: 100vw;
@@ -21,252 +34,314 @@
 
         #button-container {
             position: absolute;
-            bottom: 10px;
-            left: 5%;
-            z-index: 1;
+            bottom: 15px;
+            left: 15px;
+            z-index: 1000;
             display: flex;
         }
 
-        button {
-            box-shadow: 1px 1px 2px black;
+        .btn-icon {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Modal styling */
+        .modal-header {
+            background-color: #0d6efd;
+            color: white;
+        }
+
+        .modal-title {
+            font-weight: bold;
+        }
+
+        .btn-primary {
+            background-color: #0d6efd;
+            border: none;
+        }
+
+        .custom-div-icon i {
+            font-size: 24px;
+            color: red;
+            text-shadow: 1px 1px 2px black;
         }
     </style>
 </head>
 
 <body>
     <div id="map"></div>
+
     <div id="button-container" class="row text-center">
-        <div class="col-3">
-            <button id="add-point" class="btn btn-secondary rounded-pill">Pin</button>
+        <div class="col-auto">
+            <button id="add-point" class="btn btn-secondary rounded-pill btn-icon">
+                <i class="bi bi-geo-alt-fill"></i> Pin
+            </button>
         </div>
-        <div class="col-3">
-            <button id="draw-polygon" class="btn btn-secondary rounded-pill">Draw</button>
+        <div class="col-auto">
+            <button id="draw-polygon" class="btn btn-secondary rounded-pill btn-icon">
+                <i class="bi bi-paint-bucket"></i> Draw
+            </button>
         </div>
-        <div class="col-3">
-            <button id="reset" class="btn btn-secondary rounded-pill">Reset</button>
+        <div class="col-auto">
+            <button id="reset" class="btn btn-secondary rounded-pill btn-icon">
+                <i class="bi bi-arrow-counterclockwise"></i> Reset
+            </button>
         </div>
-        <div class="col-3">
-            <button id="sendBtn" class="btn btn-secondary rounded-pill">Send</button>
+        <div class="col-auto">
+            <button id="sendBtn" class="btn btn-secondary rounded-pill btn-icon">
+                <i class="bi bi-send-fill"></i> Send
+            </button>
         </div>
     </div>
+
+    <!-- Modal -->
     <div class="modal fade" id="formModal" tabindex="-1" aria-labelledby="formModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="formModalLabel">Submit Your Details</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="detailsForm" novalidate>
                         <div class="mb-3">
-                            <label for="fullName" class="form-label">Full Name</label>
+                            <label for="name" class="form-label">Full Name</label>
                             <input type="text" id="name" name="name" class="form-control"
                                 placeholder="Enter your full name" required>
                             <div class="invalid-feedback">Please enter your full name.</div>
                         </div>
                         <div class="mb-3">
-                            <label for="phoneNumber" class="form-label">Phone Number</label>
+                            <label for="phone" class="form-label">Phone Number</label>
                             <input type="tel" id="phone" name="phone" class="form-control"
                                 placeholder="Enter your phone number" pattern="^[0-9]{10,15}$" required>
-                            <div class="invalid-feedback">Please enter a valid phone number
-                                (10-15 digits).</div>
+                            <div class="invalid-feedback">Please enter a valid phone number (10-15 digits).</div>
                         </div>
                         <div class="mb-3">
-                            <label for="placeName" class="form-label">Place Name</label>
+                            <label for="place" class="form-label">Place Name</label>
                             <input type="text" class="form-control" id="place" name="place"
                                 placeholder="Enter the place name" required>
                             <div class="invalid-feedback">Please enter the place name.</div>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100" id="save-data">Save
-                            Data</button>
+                        <button type="submit" class="btn btn-primary w-100" id="save-data">
+                            <i class="bi bi-check-circle-fill"></i> Save Data
+                        </button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="./libs//bootstrap5.3.3//js//bootstrap.bundle.min.js"></script>
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="./libs/leaflet/leaflet.js"></script>
     <script src="./libs/leaflet/L.Control.Locate.min.js"></script>
     <script src="./libs/leaflet/L.LatLng.UTM.js"></script>
 
+<!-- Add leaflet-path-drag plugin -->
+<script src="https://unpkg.com/leaflet-path-drag"></script>
 
-    <script>
-        // Initialize the map
-        var map = L.map('map').setView([-6.509, 38.08], 20); // Zoom set to a reasonable level
+<script>
+    var map = L.map('map').setView([-6.509, 38.08], 20);
 
-        // Add Esri Satellite tile layer
-        const esriTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.esri.com/">Esri</a>, Earthstar Geographics'
-        }).addTo(map);
+    // ───────────────
+    // Base Layers
+    // ───────────────
+    const osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19,
+    });
 
+    const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+        attribution: "Tiles &copy; Esri",
+        maxZoom: 19,
+    });
 
-        // Try to locate the user quickly
-        let currentLatLng = null;
+    const cartoLightLayer = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png", {
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+        maxZoom: 20,
+    });
 
-        navigator.geolocation.watchPosition(
-            (position) => {
-                const {
-                    latitude,
-                    longitude
-                } = position.coords;
-                currentLatLng = [latitude, longitude];
+    osmLayer.addTo(map);
 
-                // Center the map to the user's location
-                map.setView(currentLatLng, 20); // Close zoom level for accurate view
-            },
-            (error) => {
-                console.error('Geolocation error:', error);
-                alert('Unable to retrieve your location. Showing default view.');
-            }, {
-            enableHighAccuracy: true, // High accuracy for better positioning
-            timeout: 5000, // Short timeout for faster response
-            maximumAge: 0 // Avoid stale data
+    const baseLayers = {
+        "Street Map": osmLayer,
+        "Satellite View": satelliteLayer,
+        "Carto Light": cartoLightLayer,
+    };
+    L.control.layers(baseLayers, null, { position: "topleft" }).addTo(map);
+
+    // ───────────────
+    // Locate control
+    // ───────────────
+    let currentLatLng = null;
+    navigator.geolocation.watchPosition(
+        (position) => {
+            currentLatLng = [position.coords.latitude, position.coords.longitude];
+            map.setView(currentLatLng, 20);
+        },
+        (error) => {
+            console.error('Geolocation error:', error);
+            alert('Unable to retrieve your location. Showing default view.');
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+    );
+
+    L.control.locate({
+        position: 'topright',
+        drawCircle: true,
+        follow: false,
+        setView: true,
+        flyTo: false,
+        keepCurrentZoomLevel: true,
+        markerStyle: { color: 'blue', fillColor: '#007bff', fillOpacity: 0.6, weight: 2 },
+        circleStyle: { color: 'blue', fillColor: '#007bff', fillOpacity: 0.2 },
+        locateOptions: { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+    }).addTo(map);
+
+    // ───────────────
+    // Variables
+    // ───────────────
+    let markers = [];
+    let polygon = null;
+
+    // ───────────────
+    // Add draggable marker
+    // ───────────────
+    document.getElementById('add-point').addEventListener('click', () => {
+        if (!currentLatLng) {
+            alert('Unable to get your current location.');
+            return;
         }
-        );
 
-        // Add Locate Control for manual location recentering
-        L.control.locate({
-            position: 'topright',
-            drawCircle: true,
-            follow: false,
-            setView: true,
-            flyTo: false,
-            keepCurrentZoomLevel: true,
-            markerStyle: {
-                color: 'blue',
-                fillColor: '#007bff',
-                fillOpacity: 0.6,
-                weight: 2
-            },
-            circleStyle: {
-                color: 'blue',
-                fillColor: '#007bff',
-                fillOpacity: 0.2
-            },
-            locateOptions: {
-                enableHighAccuracy: true,
-                timeout: 5000,
-                maximumAge: 0
-            }
+        let iconHtml = `<i class="bi bi-geo-alt-fill"></i>`;
+        let bootstrapIcon = L.divIcon({
+            html: iconHtml,
+            className: "custom-div-icon",
+            iconSize: [30, 42],
+            iconAnchor: [15, 42],
+        });
+
+        let mcll = L.marker(currentLatLng, { icon: bootstrapIcon, draggable: true })
+            .addTo(map)
+            .bindPopup(`Corner point ${markers.length + 1}`)
+            .openPopup();
+
+        markers.push(mcll);
+
+        mcll.on('drag', () => {
+            if (polygon) updatePolygon();
+        });
+    });
+
+    // ───────────────
+    // Draw polygon button
+    // ───────────────
+    document.getElementById('draw-polygon').addEventListener('click', () => {
+        if (markers.length < 3) {
+            alert('You need at least 3 points to create a polygon.');
+            return;
+        }
+
+        let latlngs = markers.map(m => m.getLatLng());
+
+        if (polygon) map.removeLayer(polygon);
+
+        polygon = L.polygon(latlngs, {
+            color: 'blue',
+            fillColor: '#007bff',
+            fillOpacity: 0.3,
+            draggable: true // leaflet-path-drag plugin
         }).addTo(map);
 
-        let cornerpoints_inUTM = []; //These are the points pinned when tracking a field
-        document.getElementById('add-point').addEventListener('click', () => {
-            if (!currentLatLng) {
-                alert('Unable to get your current location.');
-                return;
-            }
+        polygon.on('drag', function (e) {
+            let newLatLngs = e.target.getLatLngs()[0];
+            let deltaLat = newLatLngs[0].lat - latlngs[0].lat;
+            let deltaLng = newLatLngs[0].lng - latlngs[0].lng;
 
-            // Add marker to the map
-            let mcll = L.marker(currentLatLng).addTo(map).bindPopup(`Corner point ${cornerpoints_inUTM.length + 1}`)
-                .openPopup();
-            // console.log(currentLatLng);
-            let cll_utm = mcll.getLatLng().utm(); //cll_utm means currentLatLng in utm format
-            if (cll_utm.southHemi == true) {
-                hemisphere = "Southern";
-            } else {
-                hemisphere = "Northern";
-            }
-            cll_utm_array = [cll_utm.x, cll_utm.y, cll_utm.zone, cll_utm.band, hemisphere]
-
-            cornerpoints_inUTM.push(cll_utm_array);
-            console.log(cornerpoints_inUTM);
-
-        });
-
-        // Draw polygon button functionality
-        document.getElementById('draw-polygon').addEventListener('click', () => {
-            if (cornerpoints_inUTM.length < 3) {
-                alert('You need at least 3 points to create a polygon.');
-                return;
-            }
-
-            // Draw the polygon
-            L.polygon(cornerpoints_inUTM, {
-                color: 'blue'
-            }).addTo(map);
-        });
-
-        // Reset button functionality
-        document.getElementById('reset').addEventListener('click', () => {
-            cornerpoints_inUTM = [];
-            map.eachLayer((layer) => {
-                if (!layer._url) {
-                    map.removeLayer(layer);
-                }
+            markers.forEach((m, i) => {
+                let newLat = m.getLatLng().lat + deltaLat;
+                let newLng = m.getLatLng().lng + deltaLng;
+                m.setLatLng([newLat, newLng]);
             });
 
-            // Reload Esri Satellite tiles
-            esriTiles.addTo(map);
+            updatePolygon();
+        });
+    });
+
+    function updatePolygon() {
+        let latlngs = markers.map(m => m.getLatLng());
+        if (polygon) polygon.setLatLngs(latlngs);
+    }
+
+    // ───────────────
+    // Reset button
+    // ───────────────
+    document.getElementById('reset').addEventListener('click', () => {
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+
+        if (polygon) {
+            map.removeLayer(polygon);
+            polygon = null;
+        }
+    });
+
+    // ───────────────
+    // Show modal
+    // ───────────────
+    document.getElementById('sendBtn').addEventListener('click', () => {
+        const formModal = new bootstrap.Modal(document.getElementById('formModal'));
+        formModal.show();
+    });
+
+    // ───────────────
+    // Save data
+    // ───────────────
+    document.getElementById('save-data').addEventListener('click', (event) => {
+        event.preventDefault();
+        const name = document.getElementById('name').value;
+        const phone = document.getElementById('phone').value;
+        const place = document.getElementById('place').value;
+
+        if (!name || !phone || !place) {
+            alert('Please provide client details.');
+            return;
+        }
+
+        if (markers.length < 1) {
+            alert('At least 1 point is needed to save.');
+            return;
+        }
+
+        let cornerpoints_inUTM = markers.map(m => {
+            let cll_utm = m.getLatLng().utm();
+            let hemisphere = cll_utm.southHemi ? "Southern" : "Northern";
+            return [cll_utm.x, cll_utm.y, cll_utm.zone, cll_utm.band, hemisphere];
         });
 
-        // Handle Send Button 
-        document.getElementById('sendBtn').addEventListener('click', () => {
-            const formModal = new bootstrap.Modal(document.getElementById('formModal'));
-            formModal.show();
-        });
+        const data = { name, phone, place, cornerpoints_inUTM };
+        console.log(data);
 
+        fetch('#', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        })
+            .then(response => response.json())
+            .then(result => alert(result.success ? 'Data saved successfully.' : `Error: ${result.message}`))
+            .catch(error => console.error('Error:', error));
+    });
 
-        // ajax to send data to php 
-        document.getElementById('save-data').addEventListener('click', () => {
-            // event.preventDefault();
-            const name = document.getElementById('name').value;
-            const phone = document.getElementById('phone').value;
-            const place = document.getElementById('place').value;
-
-            if (!name || !phone || !place) {
-                alert('Please provide client details.');
-                return;
-            }
-
-            if (cornerpoints_inUTM.length < 1) {
-                alert('At least 1 points are needed to save.');
-                return;
-            }
-
-            // Kutuma Data kwenda PHP script i.e. save_data.php kwa kutumia JSON
-            const data = {
-                name,
-                phone,
-                place,
-                cornerpoints_inUTM,
-            };
-
-            console.log(data); //for debugging
-            fetch('#', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data),
-            })
-                .then((response) => response.json())
-                .then((result) => {
-                    if (result.success) {
-                        alert('Data saved successfully.');
-                    } else {
-                        alert(`Error: ${result.message}`);
-                    }
-                })
-                .catch((error) => console.error('Error:', error));
-        });
-
-
-        //code za kuvalidate form
-        document.getElementById('detailsForm').addEventListener('submit', function (event) {
-            const form = this;
-
-            // Check if form is valid
-            if (!form.checkValidity()) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-
-            // Add Bootstrap validation class
-            form.classList.add('was-validated');
-        });
-    </script>
+    document.getElementById('detailsForm').addEventListener('submit', function (event) {
+        if (!this.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        this.classList.add('was-validated');
+    });
+</script>
 </body>
 
 </html>
