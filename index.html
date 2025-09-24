@@ -41,13 +41,9 @@
             left: 15px;
             z-index: 1000;
             display: flex;
-            /* flex layout */
             flex-wrap: nowrap;
-            /* prevent wrapping */
             align-items: center;
-            /* vertical alignment */
             gap: 7px;
-            /* spacing between buttons */
 
             background: rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(2px);
@@ -56,8 +52,6 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             padding: 8px;
         }
-
-
 
         .btn-icon {
             display: flex;
@@ -90,30 +84,23 @@
 
         .leaflet-popup-content {
             margin: 4px;
-            /* reduce padding inside popup */
             font-size: 13px;
-            /* smaller text */
             color: #fff;
-            /* text color */
             background: #007bff;
-            /* custom background */
             border-radius: 6px;
             text-align: center;
         }
 
         .leaflet-popup-content-wrapper {
             background: #007bff;
-            /* match wrapper background */
             color: #fff;
             padding: 2px 6px;
-            /* tight padding */
             border-radius: 6px;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
         }
 
         .leaflet-popup-tip {
             background: #007bff;
-            /* arrow color */
         }
 
         .leaflet-control-layers {
@@ -126,27 +113,47 @@
             background-image: url('./assets/img/map-layers-icon2.png');
             background-size: 20px 20px;
         }
+
+        /* Legend Styles */
+        .map-legend {
+            position: absolute;
+            top: 20px;
+            z-index: 1000;
+            background: rgba(0, 123, 255, 0.8);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            display: block;
+        }
+
+        #pins-legend {
+            left: 15px;
+        }
+
+        #area-legend {
+            left: 90px;
+            display: none;
+
+        }
     </style>
 </head>
 
 <body>
     <div id="map"></div>
 
-    <div id="area-legend" style="
-    position: absolute;
-    top: 20px;
-    left: 15px;
-    z-index: 1000;
-    background: rgba(0,123,255,0.8);
-    color: white;
-    padding: 6px 10px;
-    border-radius: 5px;
-    font-weight: bold;
-    display: none;
-">
+    <div id="pins-legend" class="map-legend">
+        <i class="bi bi-pin"></i>: <span id="pins-value">0</span>
+    </div>
+
+    <!-- Legends -->
+    <div id="area-legend" class="map-legend">
         Area: <span id="area-value">0</span> m²
     </div>
 
+
+
+    <!-- Button container -->
     <div id="button-container" class="text-center p-3">
         <button id="add-point" class="btn btn-secondary rounded-3 btn-icon">
             <i class="bi bi-pin"></i> Pin
@@ -162,7 +169,6 @@
             <i class="bi bi-send-fill"></i> Send
         </button>
     </div>
-
 
     <!-- Modal -->
     <div class="modal fade" id="formModal" tabindex="-1" aria-labelledby="formModalLabel" aria-hidden="true">
@@ -210,24 +216,17 @@
     <script src="./libs/leaflet/L.Control.Locate.min.js"></script>
     <script src="./libs/leaflet/L.LatLng.UTM.js"></script>
 
-    <!-- Leaflet plugins -->
     <script src="https://unpkg.com/leaflet-path-drag"></script>
     <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
-
-    <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         var map = L.map('map', { zoomControl: false }).setView([-6.509, 38.08], 20);
 
-        // ───────────────
-        // Base Layers
-        // ───────────────
         const osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             attribution: '&copy; OpenStreetMap contributors',
             maxZoom: 19,
-        });
-        osmLayer.addTo(map);
+        }).addTo(map);
 
         const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
             attribution: "Tiles &copy; Esri",
@@ -246,9 +245,6 @@
         };
         L.control.layers(baseLayers).addTo(map);
 
-        // ───────────────
-        // Locate control
-        // ───────────────
         let currentLatLng = null;
         navigator.geolocation.watchPosition(
             (position) => {
@@ -270,26 +266,16 @@
             keepCurrentZoomLevel: true,
         }).addTo(map);
 
-        L.control
-            .zoom({
-                position: "topright",
-                zoomInText: "+",
-                zoomOutText: "-",
-                zoomInTitle: "Zoom in",
-                zoomOutTitle: "Zoom out",
-            })
-            .addTo(map);
+        L.control.zoom({ position: "topright" }).addTo(map);
 
-        // ───────────────
-        // Variables
-        // ───────────────
         let markers = [];
         let polygon = null;
-        let areaVisible = true;
 
-        // ───────────────
-        // Add draggable marker
-        // ───────────────
+        function updatePinsLegend() {
+            document.getElementById("pins-value").innerText = markers.length;
+        }
+        updatePinsLegend();
+
         document.getElementById('add-point').addEventListener('click', () => {
             if (!currentLatLng) {
                 Swal.fire("Error", "Unable to get your current location.", "error");
@@ -301,29 +287,22 @@
                 html: iconHtml,
                 className: "custom-div-icon",
                 iconSize: [24, 24],
-                iconAnchor: [12, 24], // bottom center, so it sits on polygon
+                iconAnchor: [12, 24],
             });
 
             let mcll = L.marker(currentLatLng, { icon: bootstrapIcon, draggable: true })
                 .addTo(map)
-                .bindPopup(`Corner ${markers.length + 1}`, {
-                    offset: L.point(0, -25), // float above marker
-                    closeButton: false,
-                    autoPan: false
-                })
+                .bindPopup(`Corner ${markers.length + 1}`, { offset: L.point(0, -25), closeButton: false })
                 .openPopup();
 
             markers.push(mcll);
+            updatePinsLegend();
 
             mcll.on('drag', () => {
                 if (polygon) updatePolygon();
             });
         });
 
-
-        // ───────────────
-        // Draw polygon
-        // ───────────────
         document.getElementById('draw-polygon').addEventListener('click', () => {
             if (markers.length < 3) {
                 Swal.fire("Warning", "You need at least 3 points to create a polygon.", "warning");
@@ -331,35 +310,10 @@
             }
 
             let latlngs = markers.map(m => m.getLatLng());
+            if (polygon) map.removeLayer(polygon);
 
-            if (polygon) {
-                map.removeLayer(polygon);
-                polygon = null;
-            }
-
-            polygon = L.polygon(latlngs, {
-                color: 'blue',
-                fillColor: '#007bff',
-                fillOpacity: 0.3,
-                draggable: false
-            }).addTo(map);
-
+            polygon = L.polygon(latlngs, { color: 'blue', fillColor: '#007bff', fillOpacity: 0.3 }).addTo(map);
             updatePolygon();
-
-            polygon.on('drag', () => {
-                let newLatLngs = polygon.getLatLngs()[0];
-                let deltaLat = newLatLngs[0].lat - latlngs[0].lat;
-                let deltaLng = newLatLngs[0].lng - latlngs[0].lng;
-
-                markers.forEach((m) => {
-                    let newLat = m.getLatLng().lat + deltaLat;
-                    let newLng = m.getLatLng().lng + deltaLng;
-                    m.setLatLng([newLat, newLng]);
-                });
-
-                updatePolygon();
-            });
-
         });
 
         function updatePolygon() {
@@ -367,30 +321,16 @@
             if (polygon) polygon.setLatLngs(latlngs);
 
             if (polygon) {
-                // Calculate area
                 let coords = latlngs.map(ll => [ll.lng, ll.lat]);
-                coords.push(coords[0]); // close polygon
+                coords.push(coords[0]);
                 let area = turf.area(turf.polygon([coords]));
-
-                // Update legend
                 document.getElementById("area-value").innerText = area.toFixed(2);
                 document.getElementById("area-legend").style.display = "block";
-
-                // Optional: keep tooltip too
-                let centroid = turf.centroid(turf.polygon([coords]));
-                let centroidLatLng = [centroid.geometry.coordinates[1], centroid.geometry.coordinates[0]];
-
             } else {
                 document.getElementById("area-legend").style.display = "none";
             }
         }
 
-
-
-
-        // ───────────────
-        // Reset button
-        // ───────────────
         document.getElementById('reset').addEventListener('click', () => {
             Swal.fire({
                 title: "Are you sure?",
@@ -403,6 +343,7 @@
                 if (result.isConfirmed) {
                     markers.forEach(m => map.removeLayer(m));
                     markers = [];
+                    updatePinsLegend();
 
                     if (polygon) {
                         map.removeLayer(polygon);
@@ -410,54 +351,6 @@
                     }
                 }
             });
-        });
-
-
-        // ───────────────
-        // Save data
-        // ───────────────
-        document.getElementById('save-data').addEventListener('click', (event) => {
-            event.preventDefault();
-            const name = document.getElementById('name').value;
-            const phone = document.getElementById('phone').value;
-            const place = document.getElementById('place').value;
-
-            if (!name || !phone || !place) {
-                Swal.fire("Error", "Please provide client details.", "error");
-                return;
-            }
-
-            if (markers.length < 1) {
-                Swal.fire("Error", "At least 1 point is needed to save.", "error");
-                return;
-            }
-
-            let cornerpoints_inUTM = markers.map(m => {
-                let cll_utm = m.getLatLng().utm();
-                let hemisphere = cll_utm.southHemi ? "Southern" : "Northern";
-                return [cll_utm.x, cll_utm.y, cll_utm.zone, cll_utm.band, hemisphere];
-            });
-
-            const data = { name, phone, place, cornerpoints_inUTM };
-            console.log(data);
-
-            fetch('#', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            })
-                .then(response => response.json())
-                .then(result => Swal.fire(result.success ? "Success" : "Error", result.message, result.success ? "success" : "error"))
-                .catch(error => Swal.fire("Error", "Failed to save data.", "error"));
-        });
-
-        document.getElementById('detailsForm').addEventListener('submit', function (event) {
-            if (!this.checkValidity()) {
-                event.preventDefault();
-                event.stopPropagation();
-                Swal.fire("Error", "Please correct the highlighted fields.", "error");
-            }
-            this.classList.add('was-validated');
         });
     </script>
 </body>
