@@ -41,18 +41,22 @@
             left: 15px;
             z-index: 1000;
             display: flex;
-            flex-wrap: wrap;
+            /* flex layout */
+            flex-wrap: nowrap;
+            /* prevent wrapping */
+            align-items: center;
+            /* vertical alignment */
+            gap: 7px;
+            /* spacing between buttons */
 
             background: rgba(255, 255, 255, 0.2);
-            /* light transparent background */
             backdrop-filter: blur(2px);
-            /* frosted glass effect */
             -webkit-backdrop-filter: blur(10px);
-            /* for Safari */
             border-radius: 12px;
-            padding: 8px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 8px;
         }
+
 
 
         .btn-icon {
@@ -119,7 +123,7 @@
         }
 
         .leaflet-control-layers-toggle {
-            background-image: url('./assets/img/map-layers-icon.png');
+            background-image: url('./assets/img/map-layers-icon2.png');
             background-size: 20px 20px;
         }
     </style>
@@ -143,31 +147,22 @@
         Area: <span id="area-value">0</span> m²
     </div>
 
-    <div id="button-container" class="row text-center">
-        <div class="col-auto">
-            <button id="add-point" class="btn btn-secondary rounded-3 btn-icon">
-                <i class="bi bi-pin"></i> Pin
-            </button>
-        </div>
-        <div class="col-auto">
-            <button id="draw-polygon" class="btn btn-secondary rounded-3 btn-icon">
-                <i class="bi bi-vector-pen"></i> Draw
-            </button>
-        </div>
-
-        <div class="col-auto">
-            <button id="reset" class="btn btn-danger rounded-3 btn-icon">
-                <i class="bi bi-arrow-counterclockwise"></i> Reset
-            </button>
-        </div>
-        <div class="col-auto">
-            <button id="sendBtn" class="btn btn-primary rounded-3 btn-icon" data-bs-toggle="modal"
-                data-bs-target="#formModal">
-                <i class="bi bi-send-fill"></i> Send
-            </button>
-        </div>
-
+    <div id="button-container" class="text-center p-3">
+        <button id="add-point" class="btn btn-secondary rounded-3 btn-icon">
+            <i class="bi bi-pin"></i> Pin
+        </button>
+        <button id="draw-polygon" class="btn btn-secondary rounded-3 btn-icon">
+            <i class="bi bi-vector-pen"></i> Draw
+        </button>
+        <button id="reset" class="btn btn-danger rounded-3 btn-icon">
+            <i class="bi bi-arrow-counterclockwise"></i> Reset
+        </button>
+        <button id="sendBtn" class="btn btn-primary rounded-3 btn-icon" data-bs-toggle="modal"
+            data-bs-target="#formModal">
+            <i class="bi bi-send-fill"></i> Send
+        </button>
     </div>
+
 
     <!-- Modal -->
     <div class="modal fade" id="formModal" tabindex="-1" aria-labelledby="formModalLabel" aria-hidden="true">
@@ -175,7 +170,8 @@
             <div class="modal-content">
                 <div class="modal-header d-flex justify-content-between">
                     <h5 class="modal-title" id="formModalLabel">Submit Your Details</h5>
-                    <button type="button" class="btn btn-light rounded-circle float-end" data-bs-dismiss="modal" aria-label="Close">
+                    <button type="button" class="btn btn-light rounded-circle float-end" data-bs-dismiss="modal"
+                        aria-label="Close">
                         <i class="bi bi-x"></i>
                     </button>
                 </div>
