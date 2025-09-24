@@ -16,6 +16,9 @@
     <link rel="stylesheet" href="./libs/leaflet/leaflet.css">
     <link rel="stylesheet" href="./libs/leaflet/L.Control.Locate.min.css">
 
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+
     <style>
         body,
         html {
@@ -38,6 +41,7 @@
             left: 15px;
             z-index: 1000;
             display: flex;
+            flex-wrap: wrap;
             gap: 5px;
         }
 
@@ -47,6 +51,7 @@
             gap: 5px;
         }
 
+        /* Modal styling */
         .modal-header {
             background-color: #0d6efd;
             color: white;
@@ -66,28 +71,46 @@
             color: red;
             text-shadow: 1px 1px 2px black;
         }
+
+        .polygon-area-tooltip {
+            background: rgba(0, 123, 255, 0.8);
+            color: white;
+            font-weight: bold;
+            border-radius: 4px;
+            padding: 2px 6px;
+        }
     </style>
 </head>
 
 <body>
     <div id="map"></div>
 
-    <div id="button-container">
-        <button id="add-point" class="btn btn-secondary rounded-pill btn-icon">
-            <i class="bi bi-plus"></i> Pin
-        </button>
-        <button id="draw-polygon" class="btn btn-secondary rounded-pill btn-icon">
-            <i class="bi bi-paint-bucket"></i> Draw
-        </button>
-        <button id="reset" class="btn btn-secondary rounded-pill btn-icon">
-            <i class="bi bi-arrow-counterclockwise"></i> Reset
-        </button>
-        <button id="sendBtn" class="btn btn-secondary rounded-pill btn-icon">
-            <i class="bi bi-send-fill"></i> Send
-        </button>
-        <button id="toggle-area" class="btn btn-secondary rounded-pill btn-icon">
-            <i class="bi bi-eye"></i> Show Area
-        </button>
+    <div id="button-container" class="row text-center">
+        <div class="col-auto">
+            <button id="add-point" class="btn btn-secondary rounded-pill btn-icon">
+                <i class="bi bi-plus"></i> Pin
+            </button>
+        </div>
+        <div class="col-auto">
+            <button id="draw-polygon" class="btn btn-secondary rounded-pill btn-icon">
+                <i class="bi bi-vector-pen"></i> Draw
+            </button>
+        </div>
+        <div class="col-auto">
+            <button id="toggle-area" class="btn btn-secondary rounded-pill btn-icon">
+                <i class="bi bi-eye"></i> Show/Hide Area
+            </button>
+        </div>
+        <div class="col-auto">
+            <button id="reset" class="btn btn-secondary rounded-pill btn-icon">
+                <i class="bi bi-arrow-counterclockwise"></i> Reset
+            </button>
+        </div>
+        <div class="col-auto">
+            <button id="sendBtn" class="btn btn-secondary rounded-pill btn-icon">
+                <i class="bi bi-send-fill"></i> Send
+            </button>
+        </div>
     </div>
 
     <!-- Modal -->
@@ -133,16 +156,25 @@
     <script src="./libs/leaflet/leaflet.js"></script>
     <script src="./libs/leaflet/L.Control.Locate.min.js"></script>
     <script src="./libs/leaflet/L.LatLng.UTM.js"></script>
+
+    <!-- Leaflet plugins -->
     <script src="https://unpkg.com/leaflet-path-drag"></script>
     <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         var map = L.map('map').setView([-6.509, 38.08], 20);
 
+        // ───────────────
+        // Base Layers
+        // ───────────────
         const osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             attribution: '&copy; OpenStreetMap contributors',
             maxZoom: 19,
-        }).addTo(map);
+        });
+        osmLayer.addTo(map);
 
         const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
             attribution: "Tiles &copy; Esri",
@@ -154,12 +186,16 @@
             maxZoom: 20,
         });
 
-        L.control.layers({
+        const baseLayers = {
             "Street Map": osmLayer,
             "Satellite View": satelliteLayer,
             "Carto Light": cartoLightLayer,
-        }).addTo(map);
+        };
+        L.control.layers(baseLayers).addTo(map);
 
+        // ───────────────
+        // Locate control
+        // ───────────────
         let currentLatLng = null;
         navigator.geolocation.watchPosition(
             (position) => {
@@ -168,7 +204,7 @@
             },
             (error) => {
                 console.error('Geolocation error:', error);
-                alert('Unable to retrieve your location.');
+                Swal.fire("Error", "Unable to retrieve your location.", "error");
             },
             { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
         );
@@ -181,14 +217,19 @@
             keepCurrentZoomLevel: true,
         }).addTo(map);
 
+        // ───────────────
+        // Variables
+        // ───────────────
         let markers = [];
         let polygon = null;
-        let areaTooltip = null;
         let areaVisible = true;
 
+        // ───────────────
+        // Add draggable marker
+        // ───────────────
         document.getElementById('add-point').addEventListener('click', () => {
             if (!currentLatLng) {
-                alert('Unable to get your current location.');
+                Swal.fire("Error", "Unable to get your current location.", "error");
                 return;
             }
 
@@ -206,17 +247,27 @@
                 .openPopup();
 
             markers.push(mcll);
-            mcll.on('drag', () => { if (polygon) updatePolygon(); });
+
+            mcll.on('drag', () => {
+                if (polygon) updatePolygon();
+            });
         });
 
+        // ───────────────
+        // Draw polygon
+        // ───────────────
         document.getElementById('draw-polygon').addEventListener('click', () => {
             if (markers.length < 3) {
-                alert('You need at least 3 points to create a polygon.');
+                Swal.fire("Warning", "You need at least 3 points to create a polygon.", "warning");
                 return;
             }
 
             let latlngs = markers.map(m => m.getLatLng());
-            if (polygon) map.removeLayer(polygon);
+
+            if (polygon) {
+                map.removeLayer(polygon);
+                polygon = null;
+            }
 
             polygon = L.polygon(latlngs, {
                 color: 'blue',
@@ -233,21 +284,27 @@
                 let deltaLng = newLatLngs[0].lng - latlngs[0].lng;
 
                 markers.forEach((m) => {
-                    m.setLatLng([m.getLatLng().lat + deltaLat, m.getLatLng().lng + deltaLng]);
+                    let newLat = m.getLatLng().lat + deltaLat;
+                    let newLng = m.getLatLng().lng + deltaLng;
+                    m.setLatLng([newLat, newLng]);
                 });
 
                 updatePolygon();
             });
+
         });
 
         function updatePolygon() {
             let latlngs = markers.map(m => m.getLatLng());
             if (polygon) polygon.setLatLngs(latlngs);
 
-            if (areaVisible && polygon) {
+            if (polygon && areaVisible) {
+                // Calculate area
                 let coords = latlngs.map(ll => [ll.lng, ll.lat]);
-                coords.push(coords[0]);
+                coords.push(coords[0]); // close polygon
                 let area = turf.area(turf.polygon([coords]));
+
+                // Calculate centroid
                 let centroid = turf.centroid(turf.polygon([coords]));
                 let centroidLatLng = [centroid.geometry.coordinates[1], centroid.geometry.coordinates[0]];
 
@@ -255,29 +312,56 @@
                     permanent: true,
                     direction: "center",
                     className: "polygon-area-tooltip"
-                }).setLatLng(centroidLatLng);
-            } else {
+                }).setTooltipLatLng(centroidLatLng).openTooltip();
+            } else if (polygon) {
                 polygon.unbindTooltip();
             }
         }
 
+        // ───────────────
+        // Toggle area display
+        // ───────────────
         document.getElementById('toggle-area').addEventListener('click', () => {
             areaVisible = !areaVisible;
             updatePolygon();
         });
 
+        // ───────────────
+        // Reset button
+        // ───────────────
         document.getElementById('reset').addEventListener('click', () => {
-            markers.forEach(m => map.removeLayer(m));
-            markers = [];
-            if (polygon) map.removeLayer(polygon);
-            polygon = null;
+            Swal.fire({
+                title: "Are you sure?",
+                text: "This will remove all markers and polygons from the map.",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonText: "Yes, reset it",
+                cancelButtonText: "Cancel"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    markers.forEach(m => map.removeLayer(m));
+                    markers = [];
+
+                    if (polygon) {
+                        map.removeLayer(polygon);
+                        polygon = null;
+                    }
+                }
+            });
         });
 
+
+        // ───────────────
+        // Show modal
+        // ───────────────
         document.getElementById('sendBtn').addEventListener('click', () => {
             const formModal = new bootstrap.Modal(document.getElementById('formModal'));
             formModal.show();
         });
 
+        // ───────────────
+        // Save data
+        // ───────────────
         document.getElementById('save-data').addEventListener('click', (event) => {
             event.preventDefault();
             const name = document.getElementById('name').value;
@@ -285,12 +369,12 @@
             const place = document.getElementById('place').value;
 
             if (!name || !phone || !place) {
-                alert('Please provide client details.');
+                Swal.fire("Error", "Please provide client details.", "error");
                 return;
             }
 
             if (markers.length < 1) {
-                alert('At least 1 point is needed to save.');
+                Swal.fire("Error", "At least 1 point is needed to save.", "error");
                 return;
             }
 
@@ -309,14 +393,15 @@
                 body: JSON.stringify(data),
             })
                 .then(response => response.json())
-                .then(result => alert(result.success ? 'Data saved successfully.' : `Error: ${result.message}`))
-                .catch(error => console.error('Error:', error));
+                .then(result => Swal.fire(result.success ? "Success" : "Error", result.message, result.success ? "success" : "error"))
+                .catch(error => Swal.fire("Error", "Failed to save data.", "error"));
         });
 
         document.getElementById('detailsForm').addEventListener('submit', function (event) {
             if (!this.checkValidity()) {
                 event.preventDefault();
                 event.stopPropagation();
+                Swal.fire("Error", "Please correct the highlighted fields.", "error");
             }
             this.classList.add('was-validated');
         });
