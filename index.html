@@ -265,7 +265,11 @@
         let currentLatLng = null;
         navigator.geolocation.watchPosition(
             (position) => {
-                currentLatLng = [position.coords.latitude, position.coords.longitude];
+                currentLatLng = L.latLng(
+                    position.coords.latitude,
+                    position.coords.longitude,
+                    position.coords.altitude || null  // altitude as z
+                );
                 map.setView(currentLatLng, 20);
             },
             (error) => {
@@ -307,17 +311,13 @@
                 iconAnchor: [12, 24],
             });
 
-            let mcll = L.marker(currentLatLng, { icon: bootstrapIcon, draggable: true })
+            let mcll = L.marker(currentLatLng, { icon: bootstrapIcon, draggable: false })
                 .addTo(map)
                 .bindPopup(`Corner ${markers.length + 1}`, { offset: L.point(0, -25), closeButton: false })
                 .openPopup();
 
             markers.push(mcll);
             updatePinsLegend();
-
-            mcll.on('drag', () => {
-                if (polygon) updatePolygon();
-            });
         });
 
         document.getElementById('draw-polygon').addEventListener('click', () => {
@@ -383,7 +383,7 @@
             const phone = document.getElementById("phone").value;
             const place = document.getElementById("place").value;
 
-            // Convert points to UTM but keep field name `coordinates`
+            // Convert points to UTM + altitude
             let coordinates = [];
             let latlngs = [];
 
@@ -396,15 +396,25 @@
             latlngs.forEach(ll => {
                 let utmPoint = ll.utm();
                 let hemisphere = utmPoint.southHemi ? "Southern" : "Northern";
-                coordinates.push([utmPoint.x, utmPoint.y, utmPoint.zone, utmPoint.band, hemisphere]);
+                let z = (ll.alt !== undefined) ? ll.alt : null;
+
+                coordinates.push({
+                    x: utmPoint.x,
+                    y: utmPoint.y,
+                    z: z,
+                    zone: utmPoint.zone,
+                    band: utmPoint.band,
+                    hemisphere: hemisphere
+                });
             });
 
             const payload = {
                 name,
                 phone,
                 place,
-                coordinates   // corninates submitted are UTM data, not lat/lng
+                coordinates   // now an array of JSON objects
             };
+
 
             fetch("./submit.php", {
                 method: "POST",
@@ -421,6 +431,16 @@
                         modal.hide();
                         this.reset();
                         this.classList.remove("was-validated");
+
+                        
+                        markers.forEach(m => map.removeLayer(m));
+                        markers = [];
+                        updatePinsLegend();
+
+                        if (polygon) {
+                            map.removeLayer(polygon);
+                            polygon = null;
+                        }
                     } else {
                         Swal.fire("Error", data.error || "Something went wrong.", "error");
                     }
