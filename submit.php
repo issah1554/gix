@@ -8,6 +8,15 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST");
 header("Access-Control-Allow-Headers: Content-Type");
 
+// Allow only POST requests
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header("HTTP/1.1 405 Method Not Allowed");
+    header("Allow: POST");
+    http_response_code(405);
+    echo json_encode(["error" => "Method not allowed. Use POST."]);
+    exit;
+}
+
 // Read raw POST body
 $rawData = file_get_contents("php://input");
 
