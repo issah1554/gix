@@ -256,7 +256,6 @@
             maxZoom: 19,
         });
 
-
         const baseLayers = {
             "Street Map": osmLayer,
             "Satellite View": satelliteLayer,
@@ -308,7 +307,7 @@
                 iconAnchor: [12, 24],
             });
 
-            let mcll = L.marker(currentLatLng, { icon: bootstrapIcon, draggable: false })
+            let mcll = L.marker(currentLatLng, { icon: bootstrapIcon, draggable: true })
                 .addTo(map)
                 .bindPopup(`Corner ${markers.length + 1}`, { offset: L.point(0, -25), closeButton: false })
                 .openPopup();
@@ -375,38 +374,38 @@
         document.getElementById("detailsForm").addEventListener("submit", function (e) {
             e.preventDefault();
 
-            // Validation (Bootstrap)
             if (!this.checkValidity()) {
                 this.classList.add("was-validated");
                 return;
             }
 
-            // Get user info
             const name = document.getElementById("name").value;
             const phone = document.getElementById("phone").value;
             const place = document.getElementById("place").value;
 
-            // Get coordinates
+            // Convert points to UTM but keep field name `coordinates`
             let coordinates = [];
+            let latlngs = [];
+
             if (polygon) {
-                // Polygon coordinates
-                coordinates = polygon.getLatLngs()[0].map(ll => [ll.lat, ll.lng]);
+                latlngs = polygon.getLatLngs()[0];
             } else if (markers.length > 0) {
-                // Fallback: marker coordinates
-                coordinates = markers.map(m => {
-                    const ll = m.getLatLng();
-                    return [ll.lat, ll.lng];
-                });
+                latlngs = markers.map(m => m.getLatLng());
             }
+
+            latlngs.forEach(ll => {
+                let utmPoint = ll.utm();
+                let hemisphere = utmPoint.southHemi ? "Southern" : "Northern";
+                coordinates.push([utmPoint.x, utmPoint.y, utmPoint.zone, utmPoint.band, hemisphere]);
+            });
 
             const payload = {
                 name,
                 phone,
                 place,
-                coordinates
+                coordinates   // corninates submitted are UTM data, not lat/lng
             };
 
-            // Send to server
             fetch("./submit.php", {
                 method: "POST",
                 headers: {
@@ -418,27 +417,20 @@
                 .then(data => {
                     if (data.success) {
                         Swal.fire("Success", data.message || "Data submitted successfully!", "success");
-
-                        // Close modal
                         const modal = bootstrap.Modal.getInstance(document.getElementById("formModal"));
                         modal.hide();
-
-                        // Reset form
                         this.reset();
                         this.classList.remove("was-validated");
                     } else {
                         Swal.fire("Error", data.error || "Something went wrong.", "error");
                     }
-
                     console.log("Server response:", data);
                 })
                 .catch(err => {
                     Swal.fire("Error", "Failed to submit data.", "error");
                     console.error(err);
                 });
-
         });
-
     </script>
 </body>
 
