@@ -133,7 +133,6 @@
         }
 
 
-
         #area-legend {
             left: 90px;
             display: none;
@@ -276,24 +275,6 @@
             "Satellite View": satelliteLayer,
         };
         L.control.layers(baseLayers).addTo(map);
-
-        let currentLatLng = null;
-        navigator.geolocation.watchPosition(
-            (position) => {
-                currentLatLng = L.latLng(
-                    position.coords.latitude,
-                    position.coords.longitude,
-                    position.coords.altitude || null  // altitude as z
-                );
-                map.setView(currentLatLng, 20);
-            },
-            (error) => {
-                console.error('Geolocation error:', error);
-                Swal.fire("Error", "Unable to retrieve your location.", "error");
-            },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
-
         L.control.locate({
             position: 'topright',
             drawCircle: true,
@@ -303,6 +284,76 @@
         }).addTo(map);
 
         L.control.zoom({ position: "topright" }).addTo(map);
+
+        let currentLatLng = null;
+
+        L.Control.ToggleCenter = L.Control.extend({
+            onAdd: function (map) {
+                let btn = L.DomUtil.create("button", "btn btn-light btn-sm leaflet-control");
+                btn.id = "toggle-center";
+                btn.innerHTML = '<i class="bi bi-crosshair" style="filter: drop-shadow(0 0 1px);"></i>';
+                btn.title = "Toggle Auto Center";
+
+                const updateButton = () => {
+                    if (autoCenter) {
+                        btn.classList.add("text-primary"); // ON state
+                    } else {
+                        btn.classList.remove("text-primary"); // OFF state
+                    }
+                };
+
+                updateButton();
+
+                L.DomEvent.on(btn, "click", L.DomEvent.stopPropagation)
+                    .on(btn, "click", L.DomEvent.preventDefault)
+                    .on(btn, "click", () => {
+                        autoCenter = !autoCenter;
+                        updateButton();
+
+                        Swal.fire({
+                            icon: "info",
+                            title: "Auto Center",
+                            text: autoCenter ? "Enabled" : "Disabled",
+                            timer: 1000,
+                            toast: true,
+                            position: "top-end",
+                            showConfirmButton: false
+                        });
+                    });
+
+                return btn;
+            },
+
+            onRemove: function (map) { }
+        });
+
+
+
+        let autoCenter = true;
+        L.control.toggleCenter = function (opts) {
+            return new L.Control.ToggleCenter(opts);
+        }
+        L.control.toggleCenter({ position: "topright" }).addTo(map);
+
+
+        navigator.geolocation.watchPosition(
+            (position) => {
+                currentLatLng = L.latLng(
+                    position.coords.latitude,
+                    position.coords.longitude,
+                    position.coords.altitude || null
+                );
+
+                if (autoCenter) {
+                    map.setView(currentLatLng, map.getZoom());
+                }
+            },
+            (error) => {
+                console.error("Geolocation error:", error);
+                Swal.fire("Error", "Unable to retrieve your location.", "error");
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
 
         let markers = [];
         let polygon = null;
