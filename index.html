@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="./assets/img/dbfavicon.png">
 
+    <link rel="stylesheet" href="./assets/css/styles.css">
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
 
@@ -120,26 +121,7 @@
             height: 30px;
         }
 
-        /* Legend Styles */
-        .map-legend {
-            position: absolute;
-            top: 20px;
-            z-index: 1000;
-            background: rgba(0, 123, 255, 0.8);
-            color: white;
-            padding: 6px 10px;
-            border-radius: 5px;
-            font-weight: bold;
-            display: block;
-        }
-
-        #pins-legend {
-            left: 15px;
-        }
-
-
-        #area-legend {
-            left: 90px;
+        .area-control {
             display: none;
             animation: shake 0.5s ease-in-out 3;
         }
@@ -183,17 +165,6 @@
 
 <body>
     <div id="map"></div>
-
-    <div id="pins-legend" class="map-legend">
-        <i class="bi bi-pin"></i>: <span id="pins-value">0</span>
-    </div>
-
-    <!-- Legends -->
-    <div id="area-legend" class="map-legend">
-        Area: <span id="area-value">0</span> m²
-    </div>
-
-
 
     <!-- Button container -->
     <div id="button-container" class="text-center p-3">
@@ -285,7 +256,11 @@
             "Street Map": osmLayer,
             "Satellite View": satelliteLayer,
         };
+
+        // 1. Layers Control
         L.control.layers(baseLayers).addTo(map);
+
+        // 2. Geolocation control
         L.control.locate({
             position: 'topright',
             drawCircle: true,
@@ -293,14 +268,14 @@
             setView: true,
             keepCurrentZoomLevel: true,
         }).addTo(map);
-
         L.control.zoom({ position: "topright" }).addTo(map);
 
         let currentLatLng = null;
 
+        // 3. Auto-Center control
         L.Control.ToggleCenter = L.Control.extend({
             onAdd: function (map) {
-                let btn = L.DomUtil.create("button", "btn btn-light btn-sm leaflet-control");
+                let btn = L.DomUtil.create("button", "leaflet-control-centering btn btn-light btn-sm leaflet-control");
                 btn.id = "toggle-center";
                 btn.innerHTML = '<i class="bi bi-crosshair" style="filter: drop-shadow(0 0 1px);"></i>';
                 btn.title = "Toggle Auto Center";
@@ -337,8 +312,6 @@
 
             onRemove: function (map) { }
         });
-
-
         let autoCenter = true;
         let isDragable = false;
         L.control.toggleCenter = function (opts) {
@@ -366,22 +339,138 @@
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
 
+        // 4. Copyright Control
+        var CopyrightControl = L.Control.extend({
+            options: {
+                position: "bottomleft" // typical position for copyright
+            },
+
+            onAdd: function (map) {
+                var container = L.DomUtil.create("div", "copyright-control");
+
+                // Add copyright HTML
+                container.innerHTML = "&copy; 2025 Databenki Group";
+
+                // Styling
+                container.style.background = "rgba(255, 255, 255, 0.8)";
+                container.style.padding = "3px 6px";
+                container.style.borderRadius = "4px";
+                container.style.fontSize = "12px";
+                container.style.color = "#333";
+                container.style.boxShadow = "0 0 3px rgba(0,0,0,0.2)";
+
+                // Prevent map interaction when clicking this control
+                L.DomEvent.disableClickPropagation(container);
+
+                return container;
+            }
+        });
+        var copyrightControl = new CopyrightControl();
+        copyrightControl.addTo(map);
+
+
         // 5. Print Map Control with Leaflet.EasyPrint
         L.easyPrint({
-            title: 'Print Map',
+            title: 'Print / Save Map',
             position: 'topright',
-            sizeModes: ['Current'],
-            exportOnly: true,
-            hideControlContainer: false
+            sizeModes: ['Current', 'A4Portrait', 'A4Landscape'],
+            exportOnly: false,
+            hideControlContainer: false,
+            hideClasses: [
+                'leaflet-control-attribution',
+                'leaflet-control-zoom',
+                'leaflet-control-easyPrint',
+                'leaflet-control-locate',
+                'leaflet-control-layers',
+                'leaflet-control-centering'
+            ],
+            filename: 'MyMapExport',
+            tileWait: 1000
         }).addTo(map);
+
+
+
+        // 6. Scale Control
+        L.control.scale({
+            position: "bottomright", // default is bottomleft
+            metric: true,           // show metric units
+            imperial: false,        // hide imperial units
+            maxWidth: 200           // maximum width of the scale in pixels
+        }).addTo(map);
+
+        // 7. Timestamp Controll
+        var TimestampControl = L.Control.extend({
+            options: { position: "bottomleft" },
+
+            onAdd: function (map) {
+                var container = L.DomUtil.create("div", "timestamp-control");
+
+                const now = new Date();
+                container.innerHTML = "<small>Printed on: " + now.toLocaleString() + "</small>";
+
+                container.style.background = "white";
+                container.style.display = "none";
+                container.style.padding = "3px 6px";
+                container.style.borderRadius = "4px";
+                container.style.fontSize = "12px";
+                container.style.color = "#333";
+                container.style.boxShadow = "0 0 3px rgba(0,0,0,0.2)";
+
+                L.DomEvent.disableClickPropagation(container);
+                return container;
+            }
+        });
+        var timestampControl = new TimestampControl();
+        timestampControl.addTo(map);
+
+
+        // 8. Corner + Area Control
+        var CombinedControl = L.Control.extend({
+            options: { position: "topleft" },
+            onAdd: function (map) {
+                var container = L.DomUtil.create("div", "combined-control");
+                container.style.display = "flex";
+                container.style.gap = "5px";
+
+                var cornersDiv = L.DomUtil.create("div", "corners-control", container);
+                cornersDiv.innerHTML = "<small style='font-size:14px; font-weight:bold;'>Corners: 0</small>";
+                cornersDiv.style.background = "rgba(0, 123, 255, 0.8)";
+                cornersDiv.style.color = "white";
+                cornersDiv.style.padding = "7px";
+                cornersDiv.style.borderRadius = "4px";
+                cornersDiv.style.boxShadow = "0 0 3px rgba(0,0,0,0.2)";
+                cornersDiv.id = "corners-control";
+
+
+                var areaDiv = L.DomUtil.create("div", "area-control", container);
+                areaDiv.innerHTML = "<small style='font-size:14px; font-weight:bold;'>Area Covered: 00.00 m²</small>";
+                areaDiv.style.background = "rgba(0, 123, 255, 0.8)";
+                areaDiv.style.padding = "7px";
+                areaDiv.style.color = "white";
+                areaDiv.style.borderRadius = "4px";
+                areaDiv.style.boxShadow = "0 0 3px rgba(0,0,0,0.2)";
+                areaDiv.id = "area-control";
+
+                L.DomEvent.disableClickPropagation(container);
+
+                return container;
+            }
+        });
+        map.addControl(new CombinedControl());
+
+
+
 
         let markers = [];
         let polygon = null;
 
-        function updatePinsLegend() {
-            document.getElementById("pins-value").innerText = markers.length;
+        function updateCornersCount() {
+            let smallTag = document.querySelector(".corners-control small");
+            if (smallTag) {
+                smallTag.innerText = `Corners: ${markers.length}`;
+            }
         }
-        updatePinsLegend();
+        updateCornersCount();
 
         document.getElementById('add-point').addEventListener('click', () => {
             if (!currentLatLng) {
@@ -406,7 +495,7 @@
             mcll.on("dragend", updatePolygon);
 
             markers.push(mcll);
-            updatePinsLegend();
+            updateCornersCount();
 
             updatePolygon(); // update polygon immediately after adding marker
         });
@@ -431,7 +520,7 @@
                     map.removeLayer(polygon);
                     polygon = null;
                 }
-                document.getElementById("area-legend").style.display = "none";
+                document.getElementById("area-control").style.display = "none";
                 return;
             }
 
@@ -448,8 +537,14 @@
             let coords = latlngs.map(ll => [ll.lng, ll.lat]);
             coords.push(coords[0]);
             let area = turf.area(turf.polygon([coords]));
-            document.getElementById("area-value").innerText = area.toFixed(2);
-            document.getElementById("area-legend").style.display = "block";
+
+            document.getElementById("area-control").style.display = "block";
+
+            // FIXED: Update the <small> inside area-control
+            let smallTag = document.querySelector(".area-control small");
+            if (smallTag) {
+                smallTag.innerText = `Total Area: ${area.toFixed(2)} m²`;
+            }
         }
 
         document.getElementById('reset').addEventListener('click', () => {
@@ -464,8 +559,8 @@
                 if (result.isConfirmed) {
                     markers.forEach(m => map.removeLayer(m));
                     markers = [];
-                    document.getElementById("area-legend").style.display = "none";
-                    updatePinsLegend();
+                    document.getElementById("area-control").style.display = "none";
+                    updateCornersCount();
 
                     if (polygon) {
                         map.removeLayer(polygon);
@@ -478,7 +573,7 @@
 
         let clickCount = 0;
         let timerId = null;
-        const legend = document.getElementById("pins-legend");
+        const cornersControl = document.getElementById("corners-control");
         function handleClick() {
             if (timerId) { clearTimeout(timerId); }
             clickCount++;
@@ -500,9 +595,9 @@
                 clickCount = 0;
             }, 1000);
         }
-        legend.addEventListener("click", handleClick);
+        cornersControl.addEventListener("click", handleClick);
         document.addEventListener("click", (e) => {
-            if (!legend.contains(e.target)) {
+            if (!cornersControl.contains(e.target)) {
                 clickCount = 0;
                 if (timerId) {
                     clearTimeout(timerId);
@@ -576,7 +671,7 @@
 
                         markers.forEach(m => map.removeLayer(m));
                         markers = [];
-                        updatePinsLegend();
+                        updateCornersCount();
 
                         if (polygon) {
                             map.removeLayer(polygon);
