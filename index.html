@@ -317,9 +317,10 @@
         let currentLatLng = null;
 
         // 3. Auto-Center control
+        let autoCenter = true;
         L.Control.ToggleCenter = L.Control.extend({
             onAdd: function (map) {
-                let btn = L.DomUtil.create("button", "leaflet-control-centering btn btn-light btn-sm leaflet-control");
+                let btn = L.DomUtil.create("div", "leaflet-control-centering leaflet-control leaflet-bar p-2 bg-white");
                 btn.id = "toggle-center";
                 btn.innerHTML = '<i class="bi bi-crosshair" style="filter: drop-shadow(0 0 1px);"></i>';
                 btn.title = "Toggle Auto Center";
@@ -356,8 +357,7 @@
 
             onRemove: function (map) { }
         });
-        let autoCenter = true;
-        let isDragable = false;
+
         L.control.toggleCenter = function (opts) {
             return new L.Control.ToggleCenter(opts);
         }
@@ -492,6 +492,7 @@
         }
         updateCornersCount();
 
+        let isDragable = false;
         document.getElementById('add-point').addEventListener('click', () => {
             if (!currentLatLng) {
                 Swal.fire("Error", "Unable to get your current location.", "error");
@@ -587,7 +588,7 @@
             return new L.Control.OptionsMenu(opts);
         }
         L.control.optionsMenu({ position: "topright" }).addTo(map);
-        
+
         //Print Map Control with Leaflet.EasyPrint
         var printer = L.easyPrint({
             title: 'Print / Save Map',
