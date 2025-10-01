@@ -368,31 +368,6 @@
         var copyrightControl = new CopyrightControl();
         copyrightControl.addTo(map);
 
-
-
-        // 5. Print Map Control with Leaflet.EasyPrint
-        var printer = L.easyPrint({
-            title: 'Print / Save Map',
-            position: 'topright',
-            sizeModes: ['Current'],
-            exportOnly: false,
-            hideControlContainer: false,
-            hideClasses: [
-                'leaflet-control-zoom',
-                'leaflet-control-locate',
-                'leaflet-control-layers',
-                'leaflet-control-centering'
-            ],
-            filename: 'MyMapExport',
-            tileWait: 1000,
-            hidden: true  // ❌ hides default button
-        }).addTo(map);
-
-        document.getElementById('print-map').addEventListener('click', () => {
-            printer.printMap('CurrentSize', 'MyMapExport');
-        });
-
-
         // 6. Scale Control
         L.control.scale({
             position: "bottomright", // default is bottomleft
@@ -479,13 +454,23 @@
                 return;
             }
 
-            let iconHtml = `<i class="bi bi-pin-fill fs-5 text-danger"></i>`;
-            let bootstrapIcon = L.divIcon({
-                html: iconHtml,
-                className: "custom-div-icon",
-                iconSize: [24, 24],
-                iconAnchor: [12, 24],
+            // let iconHtml = `<i class="bi bi-pin-fill fs-5 text-danger"></i>`;
+            // let bootstrapIcon = L.divIcon({
+            //     html: iconHtml,
+            //     className: "custom-div-icon hide-on-print",
+            //     iconSize: [24, 24],
+            //     iconAnchor: [12, 24],
+            // });
+
+            let bootstrapIcon = L.icon({
+                iconUrl: './assets/img/pin-icon5.png', // 🔹 path to your PNG
+                iconSize: [38, 38],               // size of the icon in pixels
+                iconAnchor: [19, 38],             // point of the icon which will correspond to marker's location
+                popupAnchor: [0, -4],             // where popups should open relative to icon
+                className: "hide-on-print" // custom class
+
             });
+
 
             let mcll = L.marker(currentLatLng, { icon: bootstrapIcon, draggable: isDragable })
                 .addTo(map)
@@ -500,6 +485,28 @@
 
             updatePolygon(); // update polygon immediately after adding marker
 
+        });
+
+        //Print Map Control with Leaflet.EasyPrint
+        var printer = L.easyPrint({
+            title: 'Print / Save Map',
+            position: 'topright',
+            sizeModes: ['Current'],
+            exportOnly: false,
+            hideControlContainer: false,
+            hideClasses: [
+                'leaflet-control-zoom',
+                'leaflet-control-locate',
+                'leaflet-control-layers',
+                'leaflet-control-centering',
+            ],
+            filename: 'MyMapExport',
+            tileWait: 1000,
+            hidden: true  // ❌ hides default button
+        }).addTo(map);
+
+        document.getElementById('print-map').addEventListener('click', () => {
+            printer.printMap('CurrentSize', 'MyMapExport');
         });
 
         function updatePolygon() {
