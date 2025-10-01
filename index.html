@@ -335,6 +335,7 @@
 
 
         let autoCenter = true;
+        let isDragable = false;
         L.control.toggleCenter = function (opts) {
             return new L.Control.ToggleCenter(opts);
         }
@@ -382,13 +383,18 @@
                 iconAnchor: [12, 24],
             });
 
-            let mcll = L.marker(currentLatLng, { icon: bootstrapIcon, draggable: false })
+            let mcll = L.marker(currentLatLng, { icon: bootstrapIcon, draggable: isDragable })
                 .addTo(map)
                 .bindPopup(`Corner ${markers.length + 1}`, { offset: L.point(0, -25), closeButton: false })
                 .openPopup();
 
+            mcll.on("drag", updatePolygon); 
+            mcll.on("dragend", updatePolygon);
+
             markers.push(mcll);
             updatePinsLegend();
+
+            updatePolygon(); // update polygon immediately after adding marker
         });
 
         document.getElementById('draw-polygon').addEventListener('click', () => {
@@ -406,17 +412,30 @@
 
         function updatePolygon() {
             let latlngs = markers.map(m => m.getLatLng());
-            if (polygon) polygon.setLatLngs(latlngs);
-
-            if (polygon) {
-                let coords = latlngs.map(ll => [ll.lng, ll.lat]);
-                coords.push(coords[0]);
-                let area = turf.area(turf.polygon([coords]));
-                document.getElementById("area-value").innerText = area.toFixed(2);
-                document.getElementById("area-legend").style.display = "block";
-            } else {
+            if (latlngs.length < 3) {
+                if (polygon) {
+                    map.removeLayer(polygon);
+                    polygon = null;
+                }
                 document.getElementById("area-legend").style.display = "none";
+                return;
             }
+
+            if (!polygon) {
+                polygon = L.polygon(latlngs, {
+                    color: 'blue',
+                    fillColor: '#007bff',
+                    fillOpacity: 0.3
+                }).addTo(map);
+            } else {
+                polygon.setLatLngs(latlngs);
+            }
+
+            let coords = latlngs.map(ll => [ll.lng, ll.lat]);
+            coords.push(coords[0]);
+            let area = turf.area(turf.polygon([coords]));
+            document.getElementById("area-value").innerText = area.toFixed(2);
+            document.getElementById("area-legend").style.display = "block";
         }
 
         document.getElementById('reset').addEventListener('click', () => {
@@ -431,6 +450,7 @@
                 if (result.isConfirmed) {
                     markers.forEach(m => map.removeLayer(m));
                     markers = [];
+                    document.getElementById("area-legend").style.display = "none";
                     updatePinsLegend();
 
                     if (polygon) {
@@ -439,6 +459,42 @@
                     }
                 }
             });
+        });
+
+
+        let clickCount = 0;
+        let timerId = null;
+        const legend = document.getElementById("pins-legend");
+        function handleClick() {
+            if (timerId) { clearTimeout(timerId); }
+            clickCount++;
+            console.log(clickCount);
+            if (clickCount === 9) {
+                isDragable = !isDragable;
+                Swal.fire({
+                    icon: "info",
+                    title: "Dragging",
+                    text: isDragable ? "Enabled" : "Disabled",
+                    timer: 2000,
+                    toast: true,
+                    position: "top-end",
+                    showConfirmButton: false
+                });
+                clickCount = 0;
+            }
+            timerId = setTimeout(() => {
+                clickCount = 0;
+            }, 1000);
+        }
+        legend.addEventListener("click", handleClick);
+        document.addEventListener("click", (e) => {
+            if (!legend.contains(e.target)) {
+                clickCount = 0;
+                if (timerId) {
+                    clearTimeout(timerId);
+                    timerId = null;
+                }
+            }
         });
 
 
