@@ -63,15 +63,16 @@ $coordinates = json_encode($data['coordinates']); // store as JSON string
 try {
     // Prepare insert query
     $stmt = $pdo->prepare("
-        INSERT INTO geo_data (name, phone, place, coordinates, created_at)
-        VALUES (:name, :phone, :place, :coordinates, NOW())
+        INSERT INTO geo_data (name, phone, place, coordinates,coordinates_count, created_at)
+        VALUES (:name, :phone, :place, :coordinates,:coordinates_count, NOW())
     ");
 
     $stmt->execute([
         ':name' => $name,
         ':phone' => $phone,
         ':place' => $place,
-        ':coordinates' => $coordinates
+        ':coordinates' => $coordinates,
+        ':coordinates_count' => count($data['coordinates'])
     ]);
 
     echo json_encode(["success" => true, "message" => "Data saved successfully"]);

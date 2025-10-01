@@ -454,14 +454,6 @@
                 return;
             }
 
-            // let iconHtml = `<i class="bi bi-pin-fill fs-5 text-danger"></i>`;
-            // let bootstrapIcon = L.divIcon({
-            //     html: iconHtml,
-            //     className: "custom-div-icon hide-on-print",
-            //     iconSize: [24, 24],
-            //     iconAnchor: [12, 24],
-            // });
-
             let bootstrapIcon = L.icon({
                 iconUrl: './assets/img/pin-icon5.png', // 🔹 path to your PNG
                 iconSize: [38, 38],               // size of the icon in pixels
@@ -506,6 +498,7 @@
         }).addTo(map);
 
         document.getElementById('print-map').addEventListener('click', () => {
+            markers.forEach(m => map.removeLayer(m));
             printer.printMap('CurrentSize', 'MyMapExport');
         });
 

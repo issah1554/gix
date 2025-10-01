@@ -1,6 +1,6 @@
 RewriteEngine On
-RewriteBase /ardhi/
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !routes\.php$
 RewriteRule ^(.*)$ routes.php [L,QSA]
