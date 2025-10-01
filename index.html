@@ -126,6 +126,50 @@
             animation: shake 0.5s ease-in-out 3;
         }
 
+        /* Raise above map */
+        .leaflet-control .dropdown-menu {
+            z-index: 2000;
+            /* stay above Leaflet map */
+            min-width: 160px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        /* Full width clickable row */
+        .leaflet-control .dropdown-item {
+            display: block;
+            width: 100%;
+            padding: 8px 15px;
+            cursor: pointer;
+        }
+
+        .leaflet-touch .leaflet-bar a.options-control {
+            width: 100% !important;
+            height: 100% !important;
+            line-height: 20px;
+            margin: 0 !important;
+        }
+
+        .leaflet-touch .leaflet-bar a.options-control:hover {
+            background-color: #a8a9aa !important;
+        }
+
+        .leaflet-control .dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .leaflet-control .dropdown-menu {
+            z-index: 2000;
+            min-width: 130px;
+            border-radius: 6px;
+            font-size: 14px;
+            left: 5px;
+        }
+
+        .leaflet-top .leaflet-control .leaflet-control-options {
+            margin-top: 10px;
+        }
+
         @keyframes shake {
 
             0%,
@@ -479,6 +523,71 @@
 
         });
 
+
+        // 4. Options control
+        L.Control.OptionsMenu = L.Control.extend({
+            onAdd: function (map) {
+                // Container
+                let container = L.DomUtil.create("div", "leaflet-control leaflet-bar leaflet-control-options");
+
+                // Wrapper for bootstrap dropdown
+                let wrapper = L.DomUtil.create("div", "dropdown", container);
+
+                // Button
+                let btn = L.DomUtil.create("button", "btn btn-light btn-sm", wrapper);
+                btn.id = "optionsMenu";
+                btn.setAttribute("data-bs-toggle", "dropdown");
+                btn.setAttribute("aria-expanded", "false");
+                btn.innerHTML = '<i class="bi bi-three-dots-vertical"></i>';
+
+                // Dropdown menu
+                let menu = L.DomUtil.create("ul", "dropdown-menu dropdown-menu-end shadow-sm", wrapper);
+                menu.setAttribute("aria-labelledby", "optionsMenu");
+
+                // Menu items
+                menu.innerHTML = `
+                    <li><a class="dropdown-item options-control px-0" href="#" id="option1"><i class="bi bi-check2-square text-primary  me-2"></i>Show marker</a></li>
+                    <li><a class="dropdown-item options-control px-0" href="#" id="option2">Option 2</a></li>
+                    <li><a class="dropdown-item options-control px-0" href="#" id="option3">Option 3</a></li>
+                `;
+
+                // Track state outside the handler
+                let markersVisible = true;
+
+                menu.querySelector("#option1").addEventListener("click", (e) => {
+                    e.preventDefault();
+
+                    if (markersVisible) {
+                        // Hide all markers
+                        markers.forEach(m => map.removeLayer(m));
+                        markersVisible = false;
+                        // Change icon/text
+                        e.target.innerHTML = 'Show markers';
+
+                    } else {
+                        // Show all markers
+                        markers.forEach(m => m.addTo(map));
+                        markersVisible = true;
+                        // Change icon/text
+                        e.target.innerHTML = '<i class="bi bi-check2-square me-2 text-primary"></i>Show markers';
+
+                    }
+                });
+
+                menu.querySelector("#option2").addEventListener("click", () => Swal.fire("Option 2 clicked"));
+                menu.querySelector("#option3").addEventListener("click", () => Swal.fire("Option 3 clicked"));
+
+                return container;
+            },
+            onRemove: function (map) { }
+        });
+
+        // Register and add
+        L.control.optionsMenu = function (opts) {
+            return new L.Control.OptionsMenu(opts);
+        }
+        L.control.optionsMenu({ position: "topright" }).addTo(map);
+        
         //Print Map Control with Leaflet.EasyPrint
         var printer = L.easyPrint({
             title: 'Print / Save Map',
@@ -491,6 +600,7 @@
                 'leaflet-control-locate',
                 'leaflet-control-layers',
                 'leaflet-control-centering',
+                'leaflet-control-options'
             ],
             filename: 'MyMapExport',
             tileWait: 1000,
