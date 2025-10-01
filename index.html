@@ -171,8 +171,8 @@
         <button id="add-point" class="btn btn-secondary rounded-3 btn-icon">
             <i class="bi bi-pin"></i> Pin
         </button>
-        <button id="draw-polygon" class="btn btn-secondary rounded-3 btn-icon">
-            <i class="bi bi-vector-pen"></i> Draw
+        <button id="toggle-polygon-display" class="btn btn-secondary rounded-3 btn-icon disabled">
+            <i class="bi bi-vector-pen"></i> Hide Polygon
         </button>
         <button id="reset" class="btn btn-danger rounded-3 btn-icon">
             <i class="bi bi-arrow-counterclockwise"></i> Reset
@@ -373,11 +373,10 @@
         L.easyPrint({
             title: 'Print / Save Map',
             position: 'topright',
-            sizeModes: ['Current', 'A4Portrait', 'A4Landscape'],
+            sizeModes: ['Current'],
             exportOnly: false,
             hideControlContainer: false,
             hideClasses: [
-                'leaflet-control-attribution',
                 'leaflet-control-zoom',
                 'leaflet-control-easyPrint',
                 'leaflet-control-locate',
@@ -459,8 +458,6 @@
         map.addControl(new CombinedControl());
 
 
-
-
         let markers = [];
         let polygon = null;
 
@@ -498,20 +495,42 @@
             updateCornersCount();
 
             updatePolygon(); // update polygon immediately after adding marker
-        });
-
-        document.getElementById('draw-polygon').addEventListener('click', () => {
-            if (markers.length < 3) {
-                Swal.fire("Warning", "You need at least 3 points to create a polygon.", "warning");
-                return;
+            if(markers.length >=3){
+                let btn = document.getElementById('toggle-polygon-display');
+                btn.classList.remove('disabled')
             }
-
-            let latlngs = markers.map(m => m.getLatLng());
-            if (polygon) map.removeLayer(polygon);
-
-            polygon = L.polygon(latlngs, { color: 'blue', fillColor: '#007bff', fillOpacity: 0.3 }).addTo(map);
-            updatePolygon();
         });
+
+
+        document.getElementById('toggle-polygon-display').addEventListener('click', () => {
+            let btn = document.getElementById('toggle-polygon-display');
+
+            if (!polygon) {
+                if (markers.length < 3) {
+                    Swal.fire("Warning", "You need at least 3 points to create a polygon.", "warning");
+                    return;
+                }
+                let latlngs = markers.map(m => m.getLatLng());
+                polygon = L.polygon(latlngs, {
+                    color: 'blue',
+                    fillColor: '#007bff',
+                    fillOpacity: 0.3
+                }).addTo(map);
+
+                updatePolygon();
+                btn.innerHTML = `<i class="bi bi-vector-pen"></i> Hide Polygon`;
+
+            } else {
+                if (map.hasLayer(polygon)) {
+                    map.removeLayer(polygon);
+                    btn.innerHTML = `<i class="bi bi-vector-pen"></i> Show Polygon`;
+                } else {
+                    polygon.addTo(map);
+                    btn.innerHTML = `<i class="bi bi-vector-pen"></i> Hide Polygon`;
+                }
+            }
+        });
+
 
         function updatePolygon() {
             let latlngs = markers.map(m => m.getLatLng());
