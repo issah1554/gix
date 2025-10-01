@@ -261,6 +261,12 @@
     <script src="https://unpkg.com/leaflet-path-drag"></script>
     <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Leaflet EasyPrint -->
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-easyprint@2.1.9/dist/bundle.min.js"></script>
+
+    <!-- html2canvas (for capturing the map as an image) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js"></script>
+
 
     <script>
         var map = L.map('map', { zoomControl: false }).setView([-6.509, 38.08], 20);
@@ -333,7 +339,6 @@
         });
 
 
-
         let autoCenter = true;
         let isDragable = false;
         L.control.toggleCenter = function (opts) {
@@ -360,6 +365,42 @@
             },
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
+
+        // 5. Print Map Control
+        L.Control.PrintMap = L.Control.extend({
+            onAdd: function (map) {
+                let btn = L.DomUtil.create("button", "btn btn-light btn-sm leaflet-control border-2");
+                btn.id = "print-map";
+                btn.innerHTML = '<i class="bi bi-printer-fill fs-6"></i>';
+                btn.title = "Print Map";
+
+                btn.style.display = "block"; // hidden by default
+
+                L.DomEvent.on(btn, "click", L.DomEvent.stopPropagation)
+                    .on(btn, "click", L.DomEvent.preventDefault)
+                    .on(btn, "click", () => {
+                        printMap();
+                    });
+
+                return btn;
+            },
+            onRemove: function (map) { }
+        });
+
+        L.control.printMap = function (opts) {
+            return new L.Control.PrintMap(opts);
+        };
+
+        L.control.printMap({ position: "topright" }).addTo(map);
+
+        // 5. Print Map Control with Leaflet.EasyPrint
+        L.easyPrint({
+            title: 'Print Map',
+            position: 'topright', 
+            sizeModes: ['Current'], 
+            exportOnly: true,
+            hideControlContainer: false
+        }).addTo(map);
 
         let markers = [];
         let polygon = null;
@@ -388,7 +429,7 @@
                 .bindPopup(`Corner ${markers.length + 1}`, { offset: L.point(0, -25), closeButton: false })
                 .openPopup();
 
-            mcll.on("drag", updatePolygon); 
+            mcll.on("drag", updatePolygon);
             mcll.on("dragend", updatePolygon);
 
             markers.push(mcll);
@@ -437,6 +478,32 @@
             document.getElementById("area-value").innerText = area.toFixed(2);
             document.getElementById("area-legend").style.display = "block";
         }
+
+        function printMap() {
+            if (!polygon) {
+                Swal.fire("Error", "Please draw a polygon first.", "error");
+                return;
+            }
+
+            leafletImage(map, function (err, canvas) {
+                if (err) {
+                    console.error(err);
+                    Swal.fire("Error", "Unable to capture map image.", "error");
+                    return;
+                }
+
+                const imgData = canvas.toDataURL("image/png");
+                const printWindow = window.open("", "_blank");
+                printWindow.document.write(`<img src="${imgData}" style="width:100%"/>`);
+                printWindow.document.close();
+                printWindow.print();
+            });
+        }
+
+
+
+
+
 
         document.getElementById('reset').addEventListener('click', () => {
             Swal.fire({
