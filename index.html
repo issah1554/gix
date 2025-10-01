@@ -772,6 +772,8 @@
                         markers.forEach(m => map.removeLayer(m));
                         markers = [];
                         updateCornersCount();
+                        document.getElementById("area-control").style.display = "none";
+
 
                         if (polygon) {
                             map.removeLayer(polygon);
