@@ -107,7 +107,6 @@
 
         .leaflet-control-layers {
             background: rgba(255, 255, 255, 0.9);
-            border-radius: 8px;
             font-family: Arial, sans-serif;
         }
 
@@ -168,6 +167,13 @@
 
         .leaflet-top .leaflet-control .leaflet-control-options {
             margin-top: 10px;
+        }
+
+        .leaflet-bar a.options-control {
+            text-align: start;
+            text-decoration: none;
+            color: black;
+            padding-left: 3px;
         }
 
         @keyframes shake {
@@ -318,18 +324,23 @@
 
         // 3. Auto-Center control
         let autoCenter = true;
+        // Auto-Center control
         L.Control.ToggleCenter = L.Control.extend({
             onAdd: function (map) {
-                let btn = L.DomUtil.create("div", "leaflet-control-centering leaflet-control leaflet-bar p-2 bg-white");
+                // Container
+                let container = L.DomUtil.create("div", "leaflet-control leaflet-bar leaflet-control-centering");
+
+                // Button with Bootstrap classes
+                let btn = L.DomUtil.create("button", "btn btn-light btn-sm", container);
                 btn.id = "toggle-center";
-                btn.innerHTML = '<i class="bi bi-crosshair" style="filter: drop-shadow(0 0 1px);"></i>';
+                btn.innerHTML = '<i class="bi bi-crosshair"></i>';
                 btn.title = "Toggle Auto Center";
 
                 const updateButton = () => {
                     if (autoCenter) {
-                        btn.classList.add("text-primary"); // ON state
+                        btn.classList.add("text-primary"); // ON
                     } else {
-                        btn.classList.remove("text-primary"); // OFF state
+                        btn.classList.remove("text-primary"); // OFF
                     }
                 };
 
@@ -352,16 +363,16 @@
                         });
                     });
 
-                return btn;
+                return container;
             },
 
             onRemove: function (map) { }
         });
-
         L.control.toggleCenter = function (opts) {
             return new L.Control.ToggleCenter(opts);
         }
         L.control.toggleCenter({ position: "topright" }).addTo(map);
+
 
 
         navigator.geolocation.watchPosition(
@@ -547,9 +558,16 @@
 
                 // Menu items
                 menu.innerHTML = `
-                    <li><a class="dropdown-item options-control px-0" href="#" id="option1"><i class="bi bi-check2-square text-primary  me-2"></i>Show marker</a></li>
-                    <li><a class="dropdown-item options-control px-0" href="#" id="option2">Option 2</a></li>
-                    <li><a class="dropdown-item options-control px-0" href="#" id="option3">Option 3</a></li>
+                    <li><a class="dropdown-item options-control px-2" href="#" id="option1">
+                        <i class="bi bi-check2-square text-primary me-2"></i>Show marker
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item options-control px-2" href="#" id="option2">
+                        <i class="bi bi-box-arrow-in-right me-2 text-primary"></i>Login
+                    </a></li>
+                    <li><a class="dropdown-item options-control px-2" href="#" id="option3">
+                        <i class="bi bi-person-plus me-2 text-primary"></i>Register
+                    </a></li>
                 `;
 
                 // Track state outside the handler
@@ -559,30 +577,23 @@
                     e.preventDefault();
 
                     if (markersVisible) {
-                        // Hide all markers
                         markers.forEach(m => map.removeLayer(m));
                         markersVisible = false;
-                        // Change icon/text
-                        e.target.innerHTML = 'Show markers';
-
+                        e.target.innerHTML = '<i class="bi bi-square me-2 text-primary"></i>Show markers';
                     } else {
-                        // Show all markers
                         markers.forEach(m => m.addTo(map));
                         markersVisible = true;
-                        // Change icon/text
                         e.target.innerHTML = '<i class="bi bi-check2-square me-2 text-primary"></i>Show markers';
-
                     }
                 });
 
-                menu.querySelector("#option2").addEventListener("click", () => Swal.fire("Option 2 clicked"));
-                menu.querySelector("#option3").addEventListener("click", () => Swal.fire("Option 3 clicked"));
+                menu.querySelector("#option2").addEventListener("click", () => Swal.fire("Login clicked"));
+                menu.querySelector("#option3").addEventListener("click", () => Swal.fire("Register clicked"));
 
                 return container;
             },
             onRemove: function (map) { }
         });
-
         // Register and add
         L.control.optionsMenu = function (opts) {
             return new L.Control.OptionsMenu(opts);
@@ -677,7 +688,6 @@
         function handleClick() {
             if (timerId) { clearTimeout(timerId); }
             clickCount++;
-            console.log(clickCount);
             if (clickCount === 9) {
                 isDragable = !isDragable;
                 Swal.fire({
