@@ -25,8 +25,4 @@ if (array_key_exists($request, $routes)) {
 }
 
 // Route handlers
-
-function submit()
-{
-    require 'submit.php';
-}
+function submit(){require 'submit.php';}
